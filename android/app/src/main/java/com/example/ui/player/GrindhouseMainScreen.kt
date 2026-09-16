@@ -75,6 +75,7 @@ import com.example.ui.components.StatusIndicatorDot
 import com.example.ui.components.VortexBackground
 import com.example.ui.metadata.MetadataOverlay
 import com.example.ui.metadata.TriviaOverlay
+import com.example.ui.nav.NavRail
 import com.example.ui.queue.UpNextOverlay
 import com.example.ui.settings.SettingsOverlay
 import com.example.ui.theme.AccentIceBlue
@@ -110,6 +111,8 @@ fun GrindhouseMainScreen(
     val isRemoteHintsVisible by viewModel.isRemoteHintsVisible.collectAsStateWithLifecycle()
     val metadataOverlayState by viewModel.metadataOverlayState.collectAsStateWithLifecycle()
     val isSettingsOpen by viewModel.isSettingsOpen.collectAsStateWithLifecycle()
+    val isNavRailOpen by viewModel.isNavRailOpen.collectAsStateWithLifecycle()
+    val navRailIndex by viewModel.navRailIndex.collectAsStateWithLifecycle()
     val settingsPage by viewModel.settingsPage.collectAsStateWithLifecycle()
     val movieInfo by viewModel.movieInfo.collectAsStateWithLifecycle()
     val isTriviaVisible by viewModel.isTriviaVisible.collectAsStateWithLifecycle()
@@ -127,7 +130,7 @@ fun GrindhouseMainScreen(
         viewModel.handleBackPress()
     }
 
-    var showSplashScreen by remember { mutableStateOf(true) }
+    var showSplashScreen by remember { mutableStateOf(false) } // splash disabled
     var showTouchControls by remember { mutableStateOf(false) }
 
     // Auto-hide der Touch-Bar nach 4s Inaktivitaet. touchInteractionTick resettet den
@@ -601,6 +604,17 @@ fun GrindhouseMainScreen(
                     movieInfo = movieInfo,
                     onDismiss = { viewModel.hideTrivia() },
                     isTv = isTv,
+                    modifier = Modifier.fillMaxSize()
+                )
+
+                // 7c. Left navigation rail (D-Pad LEFT)
+                NavRail(
+                    isOpen = isNavRailOpen,
+                    selectedIndex = navRailIndex,
+                    isChatOn = settings.chatEnabled,
+                    isLive = connectionStatus == ConnectionStatus.LIVE,
+                    isTv = isTv,
+                    onItemClick = { viewModel.navRailActivate(it) },
                     modifier = Modifier.fillMaxSize()
                 )
 

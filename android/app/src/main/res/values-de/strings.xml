@@ -107,7 +107,7 @@
     <string name="settings_imdb_on">Plakat, Bewertung und Trivia</string>
     <string name="settings_imdb_off">Nur Wikidata</string>
     <string name="remote_hint_trivia">T Trivia</string>
-    <string name="remote_hint_left">◄ Details</string>
+    <string name="remote_hint_left">◄ Menü</string>
     <string name="details_year">Jahr</string>
     <string name="details_runtime">Laufzeit</string>
     <string name="details_director">Regie</string>
@@ -173,4 +173,14 @@
     <string name="section_look">DARSTELLUNG</string>
     <string name="section_app">APP</string>
     <string name="update_needs_install_permission">Installation aus dieser App erlauben, dann erneut tippen</string>
+    <string name="nav_now_playing">Jetzt läuft</string>
+    <string name="nav_schedule">Sendeplan</string>
+    <string name="nav_details">Filmdetails</string>
+    <string name="nav_chat">Chat</string>
+    <string name="nav_chat_on">Chat · An</string>
+    <string name="nav_chat_off">Chat · Aus</string>
+    <string name="nav_settings">Einstellungen</string>
+    <string name="nav_status_live">LIVE</string>
+    <string name="nav_status_offline">OFFLINE</string>
+    <string name="nav_footer_hint">▲▼ WÄHLEN · OK ÖFFNEN · ► SCHLIESSEN</string>
 </resources>

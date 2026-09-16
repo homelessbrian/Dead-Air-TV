@@ -129,6 +129,22 @@ class MainActivity : ComponentActivity() {
                 }
             }
 
+            // Left navigation rail open: it owns the D-pad until closed.
+            if (viewModel.isNavRailOpen.value && !isMenuOrDialogOpen) {
+                when (event.keyCode) {
+                    KeyEvent.KEYCODE_DPAD_UP -> { viewModel.navRailMove(-1); return true }
+                    KeyEvent.KEYCODE_DPAD_DOWN -> { viewModel.navRailMove(1); return true }
+                    KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER -> { viewModel.navRailSelect(); return true }
+                    KeyEvent.KEYCODE_DPAD_RIGHT, KeyEvent.KEYCODE_DPAD_LEFT, KeyEvent.KEYCODE_BACK -> {
+                        viewModel.closeNavRail(); return true
+                    }
+                    KeyEvent.KEYCODE_MENU, KeyEvent.KEYCODE_SETTINGS -> {
+                        viewModel.closeNavRail(); viewModel.openSettings(); return true
+                    }
+                }
+                return true
+            }
+
             if (isMenuOrDialogOpen) {
                 // When in Settings or Exit Dialog, allow Compose focus navigation
                 when (event.keyCode) {
@@ -180,7 +196,7 @@ class MainActivity : ComponentActivity() {
                     return true
                 }
                 KeyEvent.KEYCODE_DPAD_LEFT -> {
-                    viewModel.toggleTrivia()
+                    viewModel.openNavRail()
                     return true
                 }
                 // Trivia und Filmdetails liegen auf D-Pad links (siehe oben) und auf 'T' fuer

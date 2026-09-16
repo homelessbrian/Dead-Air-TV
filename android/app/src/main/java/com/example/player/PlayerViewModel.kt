@@ -17,6 +17,7 @@ import com.example.data.model.MediaSyncUpdate
 import com.example.data.model.MovieInfo
 import com.example.data.model.QueueScheduleItem
 import com.example.data.model.SettingsPage
+import com.example.ui.nav.NavItem
 import com.example.ui.theme.applyPalette
 import com.example.data.repository.SettingsRepository
 import com.example.data.movie.MovieInfoRepository
@@ -156,6 +157,13 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     val isRemoteHintsVisible: StateFlow<Boolean> = _isRemoteHintsVisible.asStateFlow()
 
     private val _isSettingsOpen = MutableStateFlow(false)
+
+    // Left navigation rail (Nuvio-style). Driven by the Activity's key dispatcher.
+    private val _isNavRailOpen = MutableStateFlow(false)
+    val isNavRailOpen: StateFlow<Boolean> = _isNavRailOpen.asStateFlow()
+    private val _navRailIndex = MutableStateFlow(0)
+    val navRailIndex: StateFlow<Int> = _navRailIndex.asStateFlow()
+    private var navRailDismissJob: Job? = null
     val isSettingsOpen: StateFlow<Boolean> = _isSettingsOpen.asStateFlow()
 
     // Unterseite der Einstellungen. Liegt im ViewModel, damit die Zurueck-Taste sie kennt und
@@ -508,6 +516,53 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
+    fun openNavRail() {
+        hideMetadataOverlay()
+        hideUpNext()
+        hideTrivia()
+        _isNavRailOpen.value = true
+        scheduleNavRailHide()
+    }
+
+    fun closeNavRail() {
+        navRailDismissJob?.cancel()
+        _isNavRailOpen.value = false
+    }
+
+    fun toggleNavRail() {
+        if (_isNavRailOpen.value) closeNavRail() else openNavRail()
+    }
+
+    fun navRailMove(delta: Int) {
+        val n = NavItem.all.size
+        _navRailIndex.value = ((_navRailIndex.value + delta) % n + n) % n
+        scheduleNavRailHide()
+    }
+
+    fun navRailSelect() {
+        navRailActivate(NavItem.all[_navRailIndex.value])
+    }
+
+    fun navRailActivate(item: NavItem) {
+        _navRailIndex.value = NavItem.all.indexOf(item)
+        closeNavRail()
+        when (item) {
+            NavItem.NOW_PLAYING -> showMetadataOverlay()
+            NavItem.SCHEDULE -> showUpNext()
+            NavItem.DETAILS -> if (!_isTriviaVisible.value) toggleTrivia()
+            NavItem.CHAT -> toggleChat()
+            NavItem.SETTINGS -> openSettings()
+        }
+    }
+
+    private fun scheduleNavRailHide() {
+        navRailDismissJob?.cancel()
+        navRailDismissJob = viewModelScope.launch {
+            delay(8000L)
+            _isNavRailOpen.value = false
+        }
+    }
+
     fun promptExitDialog() {
         hideMetadataOverlay()
         hideUpNext()
@@ -530,6 +585,10 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
             }
             _isUserListVisible.value -> {
                 hideUserList()
+                true
+            }
+            _isNavRailOpen.value -> {
+                closeNavRail()
                 true
             }
             _isTriviaVisible.value -> {
