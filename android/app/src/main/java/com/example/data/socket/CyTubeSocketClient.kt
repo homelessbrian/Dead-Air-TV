@@ -98,6 +98,18 @@ class CyTubeSocketClient(
 
     private val cachedPlaylist = mutableListOf<MediaItem>()
 
+    /** Connect to a different room, dropping everything that belonged to the old one. */
+    fun switchRoom(roomName: String, savedCredentials: Pair<String, String>? = null) {
+        if (roomName != currentRoomName) {
+            cachedPlaylist.clear()
+            _nowPlaying.value = null
+            _upNext.value = emptyList()
+            _userCount.value = 0
+            _chatMessages.value = emptyList()
+        }
+        connect(roomName, savedCredentials)
+    }
+
     fun connect(roomName: String = "Channel-Z", savedCredentials: Pair<String, String>? = null) {
         cancelReconnect()
         isIntentionallyClosed = false

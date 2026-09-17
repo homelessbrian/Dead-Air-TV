@@ -47,7 +47,7 @@ suspend fun checkSpelling(text: String): List<SpellingIssue> = withContext(Dispa
             .build()
         val request = Request.Builder()
             .url("https://api.languagetool.org/v2/check")
-            .header("User-Agent", "ChannelZ-TV/1.0")
+            .header("User-Agent", "DeadAir/1.0")
             .post(body)
             .build()
 

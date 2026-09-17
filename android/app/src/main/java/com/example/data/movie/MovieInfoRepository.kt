@@ -576,6 +576,6 @@ class MovieInfoRepository(
     private companion object {
         // Wikimedia verlangt eine benennbare Kennung mit Kontaktmoeglichkeit.
         const val USER_AGENT =
-            "ChannelZ-TV/1.0"
+            "DeadAir/1.0"
     }
 }

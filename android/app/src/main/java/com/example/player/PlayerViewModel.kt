@@ -10,6 +10,7 @@ import com.example.data.model.ChannelEmote
 import com.example.data.model.ChannelUser
 import com.example.data.model.ChatLayout
 import com.example.data.model.ChatMessage
+import com.example.data.model.KnownChannels
 import com.example.data.model.LoginState
 import com.example.data.model.ConnectionStatus
 import com.example.data.model.MediaItem
@@ -302,6 +303,26 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         socketClient.connect(settings.value.roomName, settingsRepo.chatCredentials())
     }
 
+    /** Cycle to the next known CyTube room and reconnect everything to it. */
+    fun switchToNextRoom() {
+        val current = settings.value.roomName
+        val idx = KnownChannels.indexOfFirst { it.room == current }
+        val next = KnownChannels[(idx + 1) % KnownChannels.size].room
+        switchRoom(next)
+    }
+
+    fun switchRoom(room: String) {
+        if (room == settings.value.roomName) return
+        Log.d(TAG, "Switching room -> $room")
+        settingsRepo.updateSettings { it.copy(roomName = room) }
+        movieInfoJob?.cancel()
+        _movieInfo.value = null
+        hideTrivia()
+        hideUpNext()
+        hideMetadataOverlay()
+        socketClient.switchRoom(room, settingsRepo.chatCredentials())
+    }
+
     fun retryConnection() {
         Log.d(TAG, "Retrying CyTube Socket connection to room: ${settings.value.roomName}")
         socketClient.disconnect()
@@ -555,6 +576,12 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
             NavItem.SCHEDULE -> showUpNext()
             NavItem.DETAILS -> if (!_isTriviaVisible.value) toggleTrivia()
             NavItem.CHAT -> toggleChat()
+            NavItem.CHANNEL -> {
+                switchToNextRoom()
+                // keep the menu open so the new channel name is visible
+                _isNavRailOpen.value = true
+                scheduleNavRailHide()
+            }
             NavItem.SETTINGS -> openSettings()
         }
     }

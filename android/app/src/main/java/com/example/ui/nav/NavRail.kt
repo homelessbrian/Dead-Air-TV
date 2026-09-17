@@ -29,6 +29,7 @@ import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.PlayCircle
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Tv
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -60,6 +61,7 @@ enum class NavItem(val icon: ImageVector, val labelRes: Int) {
     SCHEDULE(Icons.Default.CalendarMonth, R.string.nav_schedule),
     DETAILS(Icons.Default.Info, R.string.nav_details),
     CHAT(Icons.AutoMirrored.Filled.Chat, R.string.nav_chat),
+    CHANNEL(Icons.Default.Tv, R.string.nav_channel),
     SETTINGS(Icons.Default.Settings, R.string.nav_settings);
 
     companion object {
@@ -80,6 +82,7 @@ fun NavRail(
     selectedIndex: Int,
     isChatOn: Boolean,
     isLive: Boolean,
+    channelLabel: String = "",
     isTv: Boolean,
     onItemClick: (NavItem) -> Unit = {},
     modifier: Modifier = Modifier
@@ -116,7 +119,7 @@ fun NavRail(
                 // Brand block
                 Column {
                     Text(
-                        text = "CHANNEL-Z",
+                        text = "DEAD AIR",
                         color = PureWhite,
                         fontSize = 20.sp,
                         fontWeight = FontWeight.Black,
@@ -131,7 +134,8 @@ fun NavRail(
                         )
                         Spacer(Modifier.width(8.dp))
                         Text(
-                            text = stringResource(if (isLive) R.string.nav_status_live else R.string.nav_status_offline),
+                            text = stringResource(if (isLive) R.string.nav_status_live else R.string.nav_status_offline) +
+                                    (if (channelLabel.isNotBlank()) "  ·  $channelLabel" else ""),
                             color = TextMuted,
                             fontSize = 12.sp,
                             letterSpacing = 1.5.sp
@@ -146,6 +150,8 @@ fun NavRail(
                             NavItem.CHAT -> stringResource(
                                 if (isChatOn) R.string.nav_chat_on else R.string.nav_chat_off
                             )
+                            NavItem.CHANNEL -> stringResource(R.string.nav_channel) +
+                                    (if (channelLabel.isNotBlank()) " · $channelLabel" else "")
                             else -> stringResource(item.labelRes)
                         }
                         NavRailRow(

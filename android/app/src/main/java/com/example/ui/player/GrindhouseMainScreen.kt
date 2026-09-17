@@ -64,6 +64,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.BuildConfig
 import com.example.R
 import com.example.data.model.ConnectionStatus
+import com.example.data.model.KnownChannels
 import com.example.player.PlayerViewModel
 import com.example.data.model.ChatLayout
 import com.example.ui.chat.ChatFeatureOverlays
@@ -219,7 +220,7 @@ fun GrindhouseMainScreen(
 
                 VortexBackground(
                     modifier = Modifier.fillMaxSize(),
-                    titleText = "CHANNEL-Z",
+                    titleText = settings.roomName.uppercase(),
                     subtitleText = subtitle,
                     showAnimation = isBuffering || connectionStatus == ConnectionStatus.RECONNECTING
                 )
@@ -283,6 +284,7 @@ fun GrindhouseMainScreen(
                     upNext = metadataOverlayState.upNext,
                     queueItems = metadataOverlayState.queueItems,
                     use24HourClock = settings.use24HourClock,
+                    roomName = settings.roomName,
                     isVisible = isMetadataVisible && !isUpNextVisible,
                     isRedditFallback = metadataOverlayState.isRedditFallback,
                     connectionStatus = connectionStatus,
@@ -591,6 +593,7 @@ fun GrindhouseMainScreen(
                     selectedIndex = navRailIndex,
                     isChatOn = settings.chatEnabled,
                     isLive = connectionStatus == ConnectionStatus.LIVE,
+                    channelLabel = KnownChannels.firstOrNull { it.room == settings.roomName }?.label ?: settings.roomName,
                     isTv = isTv,
                     onItemClick = { viewModel.navRailActivate(it) },
                     modifier = Modifier.fillMaxSize()

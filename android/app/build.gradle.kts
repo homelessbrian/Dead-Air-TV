@@ -14,7 +14,7 @@ android {
   compileSdk { version = release(36) { minorApiLevel = 1 } }
 
   defaultConfig {
-    applicationId = "tv.channelz.cytube"
+    applicationId = "tv.deadair.app"
     minSdk = 24
     targetSdk = 36
     // Set by the GitHub Actions workflow from the git tag (v1.2.3 -> 1.2.3 / 10203).
@@ -26,7 +26,7 @@ android {
     // GITHUB_REPOSITORY is provided automatically inside GitHub Actions.
     buildConfigField(
       "String", "UPDATE_REPO",
-      "\"${System.getenv("GITHUB_REPOSITORY") ?: "YOUR_GITHUB_USERNAME/channel-z-tv"}\""
+      "\"${System.getenv("GITHUB_REPOSITORY") ?: "YOUR_GITHUB_USERNAME/dead-air"}\""
     )
 
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
@@ -41,14 +41,14 @@ android {
     create("light") {
       dimension = "edition"
       buildConfigField("Boolean", "HAS_CHAT_INPUT", "false")
-      resValue("string", "app_name", "Channel-Z TV")
+      resValue("string", "app_name", "Dead Air")
     }
     create("full") {
       dimension = "edition"
       applicationIdSuffix = ".full"
       versionNameSuffix = "-full"
       buildConfigField("Boolean", "HAS_CHAT_INPUT", "true")
-      resValue("string", "app_name", "Channel-Z TV Full")
+      resValue("string", "app_name", "Dead Air Full")
     }
   }
 

@@ -125,7 +125,7 @@ class DataScraper(
                 val url = "$base?t=${System.currentTimeMillis()}"
                 val req = Request.Builder()
                     .url(url)
-                    .header("User-Agent", "ChannelZ-TV/1.0")
+                    .header("User-Agent", "DeadAir/1.0")
                     .header("Cache-Control", "no-cache")
                     .build()
 

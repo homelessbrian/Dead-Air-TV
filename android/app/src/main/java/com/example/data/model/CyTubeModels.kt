@@ -9,6 +9,14 @@ data class ChatMessage(
     val userRank: Int = 0
 )
 
+/** CyTube rooms the user can switch between from the side menu. */
+data class ChannelOption(val room: String, val label: String)
+
+val KnownChannels = listOf(
+    ChannelOption("Channel-Z", "Channel-Z"),
+    ChannelOption("420Grindhouse", "420 Grindhouse")
+)
+
 data class QueueScheduleItem(
     val title: String,
     val durationSeconds: Int = 0,

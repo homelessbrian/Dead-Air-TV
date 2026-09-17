@@ -51,7 +51,7 @@
     <string name="demo_stream_desc">Test-Video laden (prüft Video- und Audio-Wiedergabe)</string>
     <string name="action_play">Play</string>
     <string name="action_retry">Retry</string>
-    <string name="exit_dialog_title">Channel-Z TV beenden?</string>
+    <string name="exit_dialog_title">Dead Air beenden?</string>
     <string name="exit_dialog_msg">Möchtest du den Player verlassen?</string>
     <string name="action_exit">Beenden</string>
     <string name="action_cancel">Abbrechen</string>
@@ -186,4 +186,5 @@
     <string name="settings_clock_format">Uhrzeitformat</string>
     <string name="settings_clock_12h">12 Stunden (9:30 PM) in Sendeplan und Info</string>
     <string name="settings_clock_24h">24 Stunden (21:30) in Sendeplan und Info</string>
+    <string name="nav_channel">Kanal</string>
 </resources>
