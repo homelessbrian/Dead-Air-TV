@@ -75,6 +75,7 @@ fun GuideOverlay(
     focusCol: Int,
     scrolledBack: Boolean = false,
     movieInfo: MovieInfo? = null,
+    lookupState: String = "",
     use24HourClock: Boolean,
     isTv: Boolean,
     onProgramClick: (row: Int, col: Int) -> Unit = { _, _ -> },
@@ -278,6 +279,24 @@ fun GuideOverlay(
                                         color = TextMuted,
                                         fontSize = 12.sp,
                                         maxLines = 2,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                } else if (movieInfo == null) {
+                                    // Diagnostics while there is nothing better to show.
+                                    Spacer(Modifier.height(3.dp))
+                                    val media = if (focusedProgram.mediaId.isNotBlank())
+                                        "${focusedProgram.mediaType.ifBlank { "?" }}:${focusedProgram.mediaId.take(24)}" else "no media id"
+                                    Text(
+                                        text = listOf(
+                                            if (focusedChannel.isActive) "player socket" else "scout",
+                                            focusedChannel.status.name,
+                                            "queue ${focusedChannel.queueSize}",
+                                            media,
+                                            lookupState
+                                        ).filter { it.isNotBlank() }.joinToString("  ·  "),
+                                        color = TextMuted.copy(alpha = 0.7f),
+                                        fontSize = 11.sp,
+                                        maxLines = 1,
                                         overflow = TextOverflow.Ellipsis
                                     )
                                 }

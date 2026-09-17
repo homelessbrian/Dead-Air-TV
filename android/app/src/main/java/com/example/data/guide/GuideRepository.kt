@@ -25,7 +25,9 @@ data class GuideChannel(
     val label: String,
     val isActive: Boolean,
     val status: ConnectionStatus,
-    val programs: List<GuideProgram>
+    val programs: List<GuideProgram>,
+    /** Diagnostics: how many items the room's playlist currently holds. */
+    val queueSize: Int = 0
 )
 
 /**

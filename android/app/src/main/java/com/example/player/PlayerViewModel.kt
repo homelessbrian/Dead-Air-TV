@@ -74,6 +74,9 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     private val _guideMovieInfo = MutableStateFlow<MovieInfo?>(null)
     val guideMovieInfo: StateFlow<MovieInfo?> = _guideMovieInfo.asStateFlow()
     private var guideInfoJob: Job? = null
+    /** Diagnostics for the guide's detail strip: what the last lookup tried and found. */
+    private val _guideLookupState = MutableStateFlow("")
+    val guideLookupState: StateFlow<String> = _guideLookupState.asStateFlow()
     private val guideInfoCache = mutableMapOf<String, MovieInfo?>()
     val dataScraper = DataScraper(viewModelScope)
     private val movieInfoRepo = MovieInfoRepository()
@@ -117,7 +120,8 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
                         label = ch.label,
                         isActive = ch.room == active,
                         status = st,
-                        programs = GuideRepository.buildPrograms(np, pl, System.currentTimeMillis(), sched)
+                        programs = GuideRepository.buildPrograms(np, pl, System.currentTimeMillis(), sched),
+                        queueSize = pl.size
                     )
                 }
             }
@@ -638,24 +642,38 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         val title = program.title
         if (guideInfoCache.containsKey(title)) {
             _guideMovieInfo.value = guideInfoCache[title]
+            _guideLookupState.value = if (guideInfoCache[title] == null) "lookup: no match (cached)" else ""
             return
         }
         _guideMovieInfo.value = null
-        if (!settings.value.movieInfoEnabled) return
+        if (!settings.value.movieInfoEnabled) { _guideLookupState.value = "lookup: movie info disabled in settings"; return }
+        _guideLookupState.value = "lookup: searching…"
         guideInfoJob = viewModelScope.launch {
             delay(350L) // debounce while the user is still moving
             val useImdb = settings.value.imdbEnabled
-            val info = runCatching { movieInfoRepo.lookup(title, useImdb = useImdb) }.getOrNull()
+            val tried = mutableListOf<String>()
+            var info: MovieInfo? = null
+            tried += "title"
+            info = runCatching { movieInfoRepo.lookup(title, useImdb = useImdb) }
+                .onFailure { Log.w(TAG, "guide lookup(title) failed", it) }.getOrNull()
+            if (info == null) {
                 // Retry with release-group / resolution tags stripped, e.g. "Movie (1985) [1080p]".
-                ?: cleanGuideTitle(title).takeIf { it.isNotBlank() && it != title }?.let { clean ->
-                    runCatching { movieInfoRepo.lookup(clean, useImdb = useImdb) }.getOrNull()
+                val clean = cleanGuideTitle(title)
+                if (clean.isNotBlank() && clean != title) {
+                    tried += "clean"
+                    info = runCatching { movieInfoRepo.lookup(clean, useImdb = useImdb) }
+                        .onFailure { Log.w(TAG, "guide lookup(clean) failed", it) }.getOrNull()
                 }
+            }
+            if (info == null && program.mediaType.lowercase() == "yt" && program.mediaId.isNotBlank()) {
                 // YouTube items (trailers, bumpers) aren't in movie databases; ask YouTube instead.
-                ?: if (program.mediaType.lowercase() == "yt" && program.mediaId.isNotBlank()) {
-                    runCatching { movieInfoRepo.lookupYouTube(extractYouTubeId(program.mediaId)) }.getOrNull()
-                } else null
+                tried += "yt"
+                info = runCatching { movieInfoRepo.lookupYouTube(extractYouTubeId(program.mediaId)) }
+                    .onFailure { Log.w(TAG, "guide lookupYouTube failed", it) }.getOrNull()
+            }
             guideInfoCache[title] = info
             _guideMovieInfo.value = info
+            _guideLookupState.value = if (info == null) "lookup: no match (${tried.joinToString(", ")})" else ""
         }
     }
 
