@@ -1,8 +1,8 @@
 <div align="center">
 
-# 📺 Channel-Z TV
+# 📺 Dead Air
 
-**A lean-back Android TV client for the [Channel-Z CyTube channel](https://cytu.be/r/Channel-Z).**
+**A lean-back Android TV client for CyTube channels — Channel-Z and 420 Grindhouse, switchable from the menu.**
 
 Fullscreen player · chat as subtitles · schedule · movie details · built for the remote
 
@@ -17,11 +17,12 @@ Fullscreen player · chat as subtitles · schedule · movie details · built for
 
 ## What it does
 
-Channel-Z TV turns the CyTube channel into a proper TV app. Open it and the current stream is already playing, in sync with everyone else in the room. Everything else — chat, what's coming up next, details about the movie — lives in overlays you pull up with the remote and dismiss just as fast, so the video always stays front and center.
+Dead Air turns a CyTube channel into a proper TV app. Open it and the current stream is already playing, in sync with everyone else in the room. It ships with two channels — [Channel-Z](https://cytu.be/r/Channel-Z) and [420 Grindhouse](https://cytu.be/r/420Grindhouse) — and you flip between them from the side menu. Everything else — chat, what's coming up next, details about the movie — lives in overlays you pull up with the remote and dismiss just as fast, so the video always stays front and center.
 
 - **Always in sync** — connects straight to the CyTube room and follows its playlist, seeks and pauses in real time
 - **Chat as subtitles** — room chat renders at the bottom of the picture like captions; toggle it with one button, tune size, opacity, and auto-hide in Settings
-- **Left navigation rail** — a collapsible side menu (Now Playing, Schedule, Movie Details, Chat, Settings) that slides over the video
+- **Left navigation rail** — a collapsible side menu (Now Playing, Schedule, Movie Details, Chat, Channel, Settings) that slides over the video
+- **Channel switcher** — jump between Channel-Z and 420 Grindhouse without leaving the player; your pick is remembered
 - **Now Playing HUD** — title, progress, viewer count, and the next three items in the queue
 - **Up Next schedule** — the full upcoming queue with start times, in 12- or 24-hour clock
 - **Movie details & trivia** — poster, synopsis, and IMDb trivia for whatever's on
@@ -33,8 +34,8 @@ Channel-Z TV turns the CyTube channel into a proper TV app. Open it and the curr
 
 | Edition | For | Notes |
 | --- | --- | --- |
-| **Light** — `channel-z-tv-light.apk` | Android TV, Google TV, Fire TV | D-pad only. Chat is read-only (subtitles). |
-| **Full** — `channel-z-tv-full.apk` | Phones & tablets | Adds chat login and a message composer. |
+| **Light** — `dead-air-light.apk` | Android TV, Google TV, Fire TV | D-pad only. Chat is read-only (subtitles). |
+| **Full** — `dead-air-full.apk` | Phones & tablets | Adds chat login and a message composer. |
 
 ## Remote controls
 
@@ -52,11 +53,11 @@ Inside the side menu: **▲▼** move, **OK** select, **►** or **BACK** close.
 
 ## Installing on a TV
 
-1. Grab `channel-z-tv-light.apk` from the [latest release](../../releases/latest).
+1. Grab `dead-air-light.apk` from the [latest release](../../releases/latest).
 2. On the TV, install **Downloader** from the app store and allow it to install unknown apps (Settings → Apps → Security & restrictions on Google TV; Settings → My Fire TV → Developer options on Fire TV).
 3. In Downloader, enter the APK's download URL, install, and launch.
 
-Or from a computer with ADB: `adb connect <tv-ip>` then `adb install channel-z-tv-light.apk`.
+Or from a computer with ADB: `adb connect <tv-ip>` then `adb install dead-air-light.apk`.
 
 Updates: the app checks for new versions on launch and can download them itself; you can also just reinstall the newer APK the same way.
 
@@ -64,7 +65,7 @@ Updates: the app checks for new versions on launch and can download them itself;
 
 You don't need Android Studio. Every push to `main` builds both APKs on GitHub Actions:
 
-- **Actions** tab → latest *Build APKs* run → download the `channel-z-tv-apks` artifact
+- **Actions** tab → latest *Build APKs* run → download the `dead-air-apks` artifact
 - Tag a commit as `vX.Y.Z` (or draft a release with a new tag) and the APKs are attached to the release automatically
 
 To build locally: open `android/` in Android Studio, pick the `light` or `full` flavor, and *Build → Build APK(s)*.
@@ -100,10 +101,10 @@ android/app/src/main/java/com/example/
     └── theme/         color palettes
 ```
 
-Pointing the app at a different CyTube room is a one-line change: the default room name lives in `SettingsRepository.kt` (and as a fallback in a few other files — search for `"Channel-Z"`).
+Adding another CyTube room to the switcher is one line: add it to `KnownChannels` in `data/model/CyTubeModels.kt`.
 
 ## Credits & license
 
-Channel-Z TV is a fork of [Mikes 420 Grindhouse App](https://github.com/kburna243/mikes-420grindhouse-app) by Fried (@kburna243) and Mike, re-targeted at Channel-Z and rebranded. All of the sync engine, player, and overlay work is theirs. See [NOTICE.md](NOTICE.md).
+Dead Air is a fork of [Mikes 420 Grindhouse App](https://github.com/kburna243/mikes-420grindhouse-app) by Fried (@kburna243) and Mike, extended with a channel switcher, a side menu, and new branding. All of the sync engine, player, and overlay work is theirs. See [NOTICE.md](NOTICE.md).
 
-Licensed under the [GNU GPL v3](LICENSE). Unofficial, non-commercial community project — not affiliated with CyTube or the Channel-Z channel operators.
+Licensed under the [GNU GPL v3](LICENSE). Unofficial, non-commercial community project — not affiliated with CyTube or the channel operators.
