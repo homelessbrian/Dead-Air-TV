@@ -233,7 +233,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     init {
         // Keep guide scouts in step with whichever room is being watched.
         viewModelScope.launch {
-            settings.map { it.roomName }.distinctUntilChanged().collect { guideRepo.setActiveRoom(it) }
+            settings.map { it.roomName }.distinctUntilChanged().collect { guideRepo.setActiveRoom(it, settingsRepo.chatCredentials()) }
         }
         connectSocket()
 
@@ -269,6 +269,8 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
                     pendingCredentials?.let { (name, pw) ->
                         settingsRepo.saveChatCredentials(name, pw)
                         _savedChatUsername.value = name
+                        // The guide's background connections should see the same playlist.
+                        guideRepo.reconnectWithCredentials(name to pw)
                     }
                     pendingCredentials = null
                 }
@@ -469,6 +471,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         settingsRepo.clearChatCredentials()
         _savedChatUsername.value = ""
         socketClient.logout()
+        guideRepo.reconnectWithCredentials(null)
     }
 
     fun sendChat(message: String): Boolean = socketClient.sendChat(message)

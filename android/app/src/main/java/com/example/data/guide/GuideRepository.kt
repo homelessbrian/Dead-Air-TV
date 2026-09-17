@@ -39,14 +39,16 @@ class GuideRepository(private val scope: CoroutineScope) {
 
     private val scouts = mutableMapOf<String, CyTubeSocketClient>()
     private var activeRoom: String? = null
+    private var credentials: Pair<String, String>? = null
 
     fun scout(room: String): CyTubeSocketClient =
         scouts.getOrPut(room) { CyTubeSocketClient(scope) }
 
     /** Connect scouts for every room except [room]; disconnect the scout for [room] itself. */
-    fun setActiveRoom(room: String) {
-        if (room == activeRoom) return
+    fun setActiveRoom(room: String, savedCredentials: Pair<String, String>? = credentials) {
+        if (room == activeRoom && savedCredentials == credentials) return
         activeRoom = room
+        credentials = savedCredentials
         KnownChannels.forEach { ch ->
             val client = scout(ch.room)
             if (ch.room == room) {
@@ -55,8 +57,18 @@ class GuideRepository(private val scope: CoroutineScope) {
                 client.connectionStatus.value == ConnectionStatus.OFFLINE
             ) {
                 Log.d(TAG, "Guide scout connecting to ${ch.room}")
-                client.connect(ch.room)
+                client.connect(ch.room, credentials)
             }
+        }
+    }
+
+    /** Drop and re-open every scout with new credentials (after login or logout). */
+    fun reconnectWithCredentials(savedCredentials: Pair<String, String>?) {
+        credentials = savedCredentials
+        val room = activeRoom ?: return
+        KnownChannels.filter { it.room != room }.forEach { ch ->
+            Log.d(TAG, "Guide scout reconnecting to ${ch.room} (login=${savedCredentials != null})")
+            scout(ch.room).connect(ch.room, credentials)
         }
     }
 

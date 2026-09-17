@@ -426,9 +426,11 @@ fun SettingsOverlay(
                                         onClick = onCycleChatLayout
                                     ) {}
                                 }
+                            }
 
-                                // Konto und Anmeldung: gespeichertes Kennwort, Gastzugang,
-                                // Abmelden. Die Seite dahinter kennt nur die Full-Ausgabe.
+                            // CyTube account. Also on the TV build: some rooms only show their
+                            // playlist to logged-in users, and the TV guide needs that playlist.
+                            run {
                                 item {
                                     FocusableSettingsItem(
                                         title = stringResource(R.string.settings_chat_account),
