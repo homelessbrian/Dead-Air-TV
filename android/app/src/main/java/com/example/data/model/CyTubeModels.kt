@@ -150,7 +150,7 @@ enum class ConnectionStatus {
 }
 
 data class AppSettings(
-    val chatEnabled: Boolean = true,
+    val chatEnabled: Boolean = false,
     val use24HourClock: Boolean = false,
     val chatMaxLines: Int = 3,
     val chatBackgroundOpacity: Float = 0.15f,
@@ -160,7 +160,7 @@ data class AppSettings(
     val customStreamUrl: String = "",
     val safeZoneEnabled: Boolean = true,
     val isMuted: Boolean = false,
-    val subtitlesEnabled: Boolean = true,
+    val subtitlesEnabled: Boolean = false,
     val chatAutoHideSeconds: Int = 0,       // 0 = dauerhaft sichtbar, >0 = Sekunden bis Auto-Hide
     val chatTheme: String = "grindhouse",  // "grindhouse" | "classic"
     // Farbthema der gesamten Oberflaeche; gueltige Werte stehen in ui/theme/Color.kt

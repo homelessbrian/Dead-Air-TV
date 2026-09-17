@@ -51,6 +51,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import com.example.ui.theme.SurfaceCard
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -131,6 +132,7 @@ fun GrindhouseMainScreen(
     val loginState by viewModel.loginState.collectAsStateWithLifecycle()
     val savedChatUsername by viewModel.savedChatUsername.collectAsStateWithLifecycle()
     val webQueueState by viewModel.webQueueState.collectAsStateWithLifecycle()
+    val showExitHint by viewModel.showExitHint.collectAsStateWithLifecycle()
     val emotes by viewModel.emotes.collectAsStateWithLifecycle()
     val showExitDialog by viewModel.showExitDialog.collectAsStateWithLifecycle()
     val mediaSyncUpdate by viewModel.mediaSyncEvent.collectAsStateWithLifecycle(initialValue = null)
@@ -307,6 +309,7 @@ fun GrindhouseMainScreen(
                 UpNextOverlay(
                     isVisible = isUpNextVisible,
                     queueItems = metadataOverlayState.queueItems,
+                    nowPlaying = metadataOverlayState.nowPlaying,
                     use24HourClock = settings.use24HourClock,
                     redditScheduleTitle = metadataOverlayState.redditScheduleTitle,
                     redditScheduleText = metadataOverlayState.redditScheduleText,
@@ -622,6 +625,28 @@ fun GrindhouseMainScreen(
                     onItemClick = { viewModel.navRailActivate(it) },
                     modifier = Modifier.fillMaxSize()
                 )
+
+                // 7d. "Press back again to exit" toast from the bottom
+                androidx.compose.animation.AnimatedVisibility(
+                    visible = showExitHint,
+                    enter = androidx.compose.animation.fadeIn() + androidx.compose.animation.slideInVertically { it },
+                    exit = androidx.compose.animation.fadeOut() + androidx.compose.animation.slideOutVertically { it },
+                    modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = if (isTv) 48.dp else 24.dp)
+                ) {
+                    Surface(
+                        color = SurfaceCard.copy(alpha = 0.95f),
+                        shape = RoundedCornerShape(24.dp),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, AccentPurple.copy(alpha = 0.6f))
+                    ) {
+                        Text(
+                            text = stringResource(R.string.exit_hint),
+                            color = PureWhite,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            modifier = Modifier.padding(horizontal = 22.dp, vertical = 12.dp)
+                        )
+                    }
+                }
 
                 // 8. Centralized Settings Menu Modal
                 SettingsOverlay(

@@ -208,4 +208,6 @@
     <string name="webqueue_link_title">Link this TV</string>
     <string name="webqueue_link_steps">On a phone or computer, log in to the Channel-Z queue site, open “Link a Device”, name it (e.g. Living room TV) and you will get a 5-character code. Enter it here within 10 minutes.</string>
     <string name="webqueue_btn_link">Link</string>
+    <string name="upnext_now_playing">NOW PLAYING</string>
+    <string name="exit_hint">Press BACK again to exit</string>
 </resources>

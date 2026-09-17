@@ -51,7 +51,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.R
-import coil.compose.AsyncImage
+import com.example.ui.components.MoviePoster
+import com.example.ui.components.posterCandidates
 import com.example.data.model.MovieInfo
 import com.example.ui.theme.AccentIceBlue
 import com.example.ui.theme.AccentLavender
@@ -243,27 +244,24 @@ private fun MovieDetails(info: MovieInfo) {
         // Das Plakat aus der Infoleiste, hier deutlich groesser — es ist der Blickfang
         // des Panels und im HUD nur briefmarkengross.
         val poster = @Composable {
-            info.posterUrl?.let { url ->
-                AsyncImage(
-                    model = url,
-                    contentDescription = info.title,
-                    modifier = Modifier
-                        .size(width = posterW, height = posterH)
-                        .clip(RoundedCornerShape(10.dp)),
-                    contentScale = ContentScale.Crop
-                )
-            }
+            MoviePoster(
+                candidates = posterCandidates(info),
+                contentDescription = info.title,
+                modifier = Modifier
+                    .size(width = posterW, height = posterH)
+                    .clip(RoundedCornerShape(10.dp))
+            )
         }
         if (narrow) {
             Column(modifier = Modifier.padding(bottom = 6.dp)) {
                 poster()
-                info.posterUrl?.let { Spacer(modifier = Modifier.height(12.dp)) }
+                Spacer(modifier = Modifier.height(12.dp))
                 MovieDetailsText(info)
             }
         } else {
             Row(modifier = Modifier.padding(bottom = 6.dp)) {
                 poster()
-                info.posterUrl?.let { Spacer(modifier = Modifier.width(18.dp)) }
+                Spacer(modifier = Modifier.width(18.dp))
                 MovieDetailsText(info)
             }
         }

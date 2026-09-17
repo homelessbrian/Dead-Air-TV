@@ -748,7 +748,6 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         when (item) {
             NavItem.NOW_PLAYING -> showMetadataOverlay()
             NavItem.SCHEDULE -> showUpNext()
-            NavItem.DETAILS -> if (!_isTriviaVisible.value) toggleTrivia()
             NavItem.CHAT -> toggleChat()
             NavItem.GUIDE -> openGuide()
             NavItem.SETTINGS -> openSettings()
@@ -767,6 +766,29 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         hideMetadataOverlay()
         hideUpNext()
         _showExitDialog.value = true
+    }
+
+    // Press BACK twice within a short window to exit (instead of a confirmation dialog).
+    private val _showExitHint = MutableStateFlow(false)
+    val showExitHint: StateFlow<Boolean> = _showExitHint.asStateFlow()
+    private var lastBackPressMs = 0L
+    private var exitHintJob: Job? = null
+
+    /** @return true if the app should now exit. */
+    fun backPressedOnIdleScreen(): Boolean {
+        val now = System.currentTimeMillis()
+        if (now - lastBackPressMs < EXIT_WINDOW_MS) {
+            _showExitHint.value = false
+            return true
+        }
+        lastBackPressMs = now
+        _showExitHint.value = true
+        exitHintJob?.cancel()
+        exitHintJob = viewModelScope.launch {
+            delay(EXIT_WINDOW_MS)
+            _showExitHint.value = false
+        }
+        return false
     }
 
     fun dismissExitDialog() {
@@ -816,8 +838,8 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
                 true
             }
             else -> {
-                promptExitDialog()
-                true
+                // Not handled here: the Activity decides between "show hint" and "exit".
+                false
             }
         }
     }
@@ -894,3 +916,5 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         dataScraper.stopScraping()
     }
 }
+
+private const val EXIT_WINDOW_MS = 2500L

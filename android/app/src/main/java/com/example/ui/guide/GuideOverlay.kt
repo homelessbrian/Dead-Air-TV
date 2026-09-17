@@ -46,8 +46,8 @@ import com.example.data.guide.GuideChannel
 import com.example.data.guide.GuideProgram
 import com.example.data.model.ConnectionStatus
 import com.example.data.model.MovieInfo
-import coil.compose.AsyncImage
-import androidx.compose.ui.layout.ContentScale
+import com.example.ui.components.MoviePoster
+import com.example.ui.components.posterCandidates
 import com.example.ui.components.formatClock
 import com.example.ui.theme.AccentIceBlue
 import com.example.ui.theme.AccentLavender
@@ -75,7 +75,6 @@ fun GuideOverlay(
     focusCol: Int,
     scrolledBack: Boolean = false,
     movieInfo: MovieInfo? = null,
-    lookupState: String = "",
     use24HourClock: Boolean,
     isTv: Boolean,
     onProgramClick: (row: Int, col: Int) -> Unit = { _, _ -> },
@@ -231,19 +230,15 @@ fun GuideOverlay(
                 ) {
                     if (focusedProgram != null && focusedChannel != null) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            val poster = movieInfo?.posterUrl?.takeIf { it.isNotBlank() } ?: focusedProgram.posterUrl
-                            if (!poster.isNullOrBlank()) {
-                                AsyncImage(
-                                    model = poster,
-                                    contentDescription = null,
-                                    contentScale = ContentScale.Crop,
-                                    modifier = Modifier
-                                        .width(if (isTv) 64.dp else 52.dp)
-                                        .fillMaxHeight()
-                                        .clip(RoundedCornerShape(8.dp))
-                                )
-                                Spacer(Modifier.width(14.dp))
-                            }
+                            MoviePoster(
+                                candidates = posterCandidates(movieInfo, focusedProgram.posterUrl),
+                                contentDescription = null,
+                                modifier = Modifier
+                                    .width(if (isTv) 64.dp else 52.dp)
+                                    .fillMaxHeight()
+                                    .clip(RoundedCornerShape(8.dp))
+                            )
+                            Spacer(Modifier.width(14.dp))
                             Column(modifier = Modifier.weight(1f)) {
                                 val displayTitle = movieInfo?.title?.takeIf { it.isNotBlank() } ?: focusedProgram.title
                                 val year = movieInfo?.year?.let { "  ($it)" } ?: ""
@@ -278,26 +273,7 @@ fun GuideOverlay(
                                         text = plot,
                                         color = TextMuted,
                                         fontSize = 12.sp,
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis
-                                    )
-                                }
-                                run {
-                                    // Diagnostics (temporary while we chase the playlist issue).
-                                    Spacer(Modifier.height(3.dp))
-                                    val media = if (focusedProgram.mediaId.isNotBlank())
-                                        "${focusedProgram.mediaType.ifBlank { "?" }}:${focusedProgram.mediaId.take(24)}" else "no media id"
-                                    Text(
-                                        text = listOf(
-                                            if (focusedChannel.isActive) "player socket" else "scout",
-                                            focusedChannel.status.name,
-                                            "queue ${focusedChannel.queueSize}",
-                                            media,
-                                            lookupState
-                                        ).filter { it.isNotBlank() }.joinToString("  ·  "),
-                                        color = TextMuted.copy(alpha = 0.7f),
-                                        fontSize = 11.sp,
-                                        maxLines = 1,
+                                        maxLines = 2,
                                         overflow = TextOverflow.Ellipsis
                                     )
                                 }

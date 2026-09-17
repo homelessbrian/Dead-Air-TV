@@ -17,7 +17,7 @@ class SettingsRepository(context: Context) {
 
     private fun loadSettings(): AppSettings {
         return AppSettings(
-            chatEnabled = prefs.getBoolean("chat_enabled", true),
+            chatEnabled = prefs.getBoolean("chat_enabled", false),
             use24HourClock = prefs.getBoolean("use_24h_clock", false),
             chatMaxLines = prefs.getInt("chat_max_lines", 3).coerceIn(1, 3),
             chatBackgroundOpacity = prefs.getFloat("chat_opacity", 0.15f),
@@ -26,7 +26,7 @@ class SettingsRepository(context: Context) {
             roomName = prefs.getString("room_name", "Channel-Z") ?: "Channel-Z",
             customStreamUrl = prefs.getString("custom_stream_url", "") ?: "",
             safeZoneEnabled = prefs.getBoolean("safe_zone", true),
-            subtitlesEnabled = prefs.getBoolean("subtitles_enabled", true),
+            subtitlesEnabled = prefs.getBoolean("subtitles_enabled", false),
             chatAutoHideSeconds = prefs.getInt("chat_auto_hide_seconds", 0),
             chatTheme = prefs.getString("chat_theme", "grindhouse") ?: "grindhouse",
             appTheme = prefs.getString("app_theme", DefaultPaletteId) ?: DefaultPaletteId,

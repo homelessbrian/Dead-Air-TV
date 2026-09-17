@@ -188,8 +188,8 @@ class MainActivity : ComponentActivity() {
                 KeyEvent.KEYCODE_DPAD_DOWN -> {
                     if (viewModel.isMetadataVisible.value) {
                         viewModel.hideMetadataOverlay()
-                    } else {
-                        viewModel.toggleChat()
+                    } else if (viewModel.settings.value.chatEnabled) {
+                        viewModel.toggleChat() // DOWN hides chat; turning it on is via menu/settings
                     }
                     return true
                 }
@@ -206,6 +206,9 @@ class MainActivity : ComponentActivity() {
                     if (isTv) {
                         val handled = viewModel.handleBackPress()
                         if (handled) return true
+                        // Nothing open: BACK twice within a short window exits.
+                        if (viewModel.backPressedOnIdleScreen()) finish()
+                        return true
                     }
                 }
                 KeyEvent.KEYCODE_DPAD_RIGHT -> {

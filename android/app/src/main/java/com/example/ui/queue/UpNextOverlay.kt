@@ -7,6 +7,7 @@ import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import com.example.data.model.MediaItem
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.gestures.animateScrollBy
 import androidx.compose.foundation.layout.Arrangement
@@ -68,6 +69,7 @@ import kotlinx.coroutines.launch
 fun UpNextOverlay(
     isVisible: Boolean,
     queueItems: List<QueueScheduleItem>,
+    nowPlaying: MediaItem? = null,
     use24HourClock: Boolean = false,
     redditScheduleTitle: String? = null,
     redditScheduleText: String? = null,
@@ -297,6 +299,66 @@ fun UpNextOverlay(
                                     true
                                 }
                         ) {
+                            if (nowPlaying != null) {
+                                item {
+                                    val startedMs = System.currentTimeMillis() - (nowPlaying.currentTimeSeconds * 1000).toLong()
+                                    val durMin = (nowPlaying.durationSeconds / 60).toInt()
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .background(AccentPurple.copy(alpha = 0.28f), RoundedCornerShape(8.dp))
+                                            .padding(horizontal = 10.dp, vertical = 8.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(
+                                            text = formatClock(startedMs, use24HourClock),
+                                            style = TextStyle(
+                                                color = PureWhite,
+                                                fontWeight = FontWeight.Bold,
+                                                fontSize = 11.sp,
+                                                fontFamily = FontFamily.Monospace
+                                            ),
+                                            modifier = Modifier.width(76.dp)
+                                        )
+                                        Column(modifier = Modifier.weight(1f)) {
+                                            Text(
+                                                text = stringResource(R.string.upnext_now_playing),
+                                                style = TextStyle(
+                                                    color = AccentLavender,
+                                                    fontWeight = FontWeight.Bold,
+                                                    fontSize = 9.sp,
+                                                    letterSpacing = 1.5.sp
+                                                )
+                                            )
+                                            Text(
+                                                text = nowPlaying.title,
+                                                style = TextStyle(
+                                                    color = PureWhite,
+                                                    fontWeight = FontWeight.SemiBold,
+                                                    fontSize = 12.sp
+                                                ),
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis
+                                            )
+                                        }
+                                        Text(
+                                            text = if (durMin > 0) "${durMin}m" else "",
+                                            style = TextStyle(
+                                                color = PureWhite.copy(alpha = 0.8f),
+                                                fontSize = 11.sp,
+                                                fontFamily = FontFamily.Monospace
+                                            ),
+                                            modifier = Modifier.width(76.dp)
+                                        )
+                                    }
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .height(1.dp)
+                                            .background(SubtleBorder.copy(alpha = 0.5f))
+                                    )
+                                }
+                            }
                             itemsIndexed(queueItems.take(50)) { index, item ->
                                 Row(
                                     modifier = Modifier

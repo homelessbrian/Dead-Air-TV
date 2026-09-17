@@ -209,4 +209,6 @@
     <string name="webqueue_link_title">Diesen Fernseher verknüpfen</string>
     <string name="webqueue_link_steps">Auf Handy oder PC bei der Channel-Z-Warteschlange anmelden, „Link a Device“ öffnen, ein Gerät benennen und den 5-stelligen Code hier innerhalb von 10 Minuten eingeben.</string>
     <string name="webqueue_btn_link">Verknüpfen</string>
+    <string name="upnext_now_playing">LÄUFT GERADE</string>
+    <string name="exit_hint">Zum Beenden erneut ZURÜCK drücken</string>
 </resources>

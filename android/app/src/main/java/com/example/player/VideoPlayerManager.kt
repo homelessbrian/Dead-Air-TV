@@ -132,6 +132,8 @@ class VideoPlayerManager(
     private var reconnectJob: Job? = null
     private var reconnectAttempts = 0
     private var shouldPlayWhenReady = true
+    /** True between onStop and onStart: the server's sync ticks must not un-pause us. */
+    @Volatile private var isInBackground = false
     private var lastPlaybackPosition: Long = 0L
     private var lastSeekTimestampMs: Long = 0L
     private var nudgeStartedMs: Long = 0L
@@ -167,7 +169,7 @@ class VideoPlayerManager(
             .setHandleAudioBecomingNoisy(true)
             .setWakeMode(C.WAKE_MODE_NETWORK)
             .build().apply {
-                playWhenReady = shouldPlayWhenReady
+                playWhenReady = shouldPlayWhenReady && !isInBackground
                 repeatMode = Player.REPEAT_MODE_ALL
                 trackSelectionParameters = trackSelectionParameters
                     .buildUpon()
@@ -358,9 +360,11 @@ class VideoPlayerManager(
             }
             player.prepare()
             shouldPlayWhenReady = true
-            player.playWhenReady = true
-            player.play()
-            _isPlaying.value = true
+            if (!isInBackground) {
+                player.playWhenReady = true
+                player.play()
+            }
+            _isPlaying.value = !isInBackground
             _playerError.value = null
         } catch (e: Exception) {
             Log.e(TAG, "Failed to load stream url: $url", e)
@@ -375,6 +379,7 @@ class VideoPlayerManager(
      */
     fun syncPosition(targetSeconds: Double, paused: Boolean? = null) {
         val player = exoPlayer ?: return
+        if (isInBackground) return
         if (_currentMedia.value?.isWebStream == true) return
 
         // 1. Play / Pause state sync
@@ -454,6 +459,7 @@ class VideoPlayerManager(
 
     fun play() {
         shouldPlayWhenReady = true
+        if (isInBackground) return
         _isPlaying.value = true
         exoPlayer?.play()
     }
@@ -525,7 +531,7 @@ class VideoPlayerManager(
             delay(delayMillis)
             exoPlayer?.let { player ->
                 player.prepare()
-                player.play()
+                if (!isInBackground) player.play()
             }
         }
     }
@@ -535,6 +541,7 @@ class VideoPlayerManager(
     }
 
     fun onStart() {
+        isInBackground = false
         if (exoPlayer == null) {
             initializePlayer()
         } else {
@@ -549,8 +556,10 @@ class VideoPlayerManager(
     }
 
     fun onStop() {
+        isInBackground = true
         exoPlayer?.let { player ->
             lastPlaybackPosition = player.currentPosition
+            player.playWhenReady = false
             player.pause()
         }
     }

@@ -63,6 +63,9 @@ import com.example.ui.theme.TextMuted
 import com.example.ui.theme.TextSubtitleWhite
 import java.util.Locale
 import com.example.ui.components.formatClock
+import com.example.ui.components.MoviePoster
+import com.example.ui.components.posterCandidates
+import com.example.data.model.KnownChannels
 import com.example.ui.theme.SurfaceCard
 import com.example.ui.theme.SurfaceDark
 
@@ -122,39 +125,22 @@ fun MetadataOverlay(
                     ) {
                         // Plakat, sobald eines gefunden wurde — sonst bleibt das TV-Logo stehen.
                         // Hochkant im Kinoformat, damit das Bild nicht beschnitten wirkt.
-                        val poster = movieInfo?.posterUrl
+                        // Poster (btttr.cc first, then the lookup's own art) with a themed stand-in.
                         Box(
                             modifier = Modifier
-                                .then(
-                                    if (poster != null) Modifier.size(width = 46.dp, height = 66.dp)
-                                    else Modifier.size(48.dp)
-                                )
+                                .size(width = 46.dp, height = 66.dp)
                                 .clip(RoundedCornerShape(12.dp))
                                 .background(SurfaceCard)
                                 .border(1.dp, AccentPurple.copy(alpha = 0.5f), RoundedCornerShape(12.dp)),
                             contentAlignment = Alignment.Center
                         ) {
-                            if (poster != null) {
-                                AsyncImage(
-                                    model = poster,
-                                    contentDescription = movieInfo.title,
-                                    modifier = Modifier
-                                        .fillMaxSize()
-                                        .clip(RoundedCornerShape(11.dp)),
-                                    contentScale = ContentScale.Crop
-                                )
-                            } else {
-                                Image(
-                                    painter = painterResource(id = R.drawable.now_playing_logo),
-                                    contentDescription = "Logo",
-                                    modifier = Modifier
-                                        .size(42.dp)
-                                        .clip(RoundedCornerShape(10.dp)),
-                                    contentScale = ContentScale.Fit
-                                )
-                            }
+                            MoviePoster(
+                                candidates = posterCandidates(movieInfo),
+                                contentDescription = movieInfo?.title,
+                                modifier = Modifier.fillMaxSize(),
+                                showLabel = false
+                            )
                         }
-
                         Spacer(modifier = Modifier.width(14.dp))
 
                         // Title & Channel
@@ -189,7 +175,7 @@ fun MetadataOverlay(
                                 MovieFactsLine(movieInfo)
                             }
                             Text(
-                                text = "cytu.be/r/$roomName",
+                                text = KnownChannels.firstOrNull { it.room == roomName }?.label ?: roomName,
                                 style = TextStyle(
                                     color = TextMuted,
                                     fontSize = 12.sp
