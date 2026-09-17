@@ -81,6 +81,15 @@ fun convertGoogleDriveUrl(url: String): String {
  */
 const val PLAYBACK_LEAD_SECONDS = 2.0
 
+/** Drift below this is left alone; between this and SEEK_THRESHOLD_MS a 2% speed nudge is used. */
+private const val NUDGE_THRESHOLD_MS = 1200L
+/** Drift at or above this is corrected with a seek instead of a speed change. */
+private const val SEEK_THRESHOLD_MS = 4000L
+/** Never keep a speed nudge running longer than this before falling back to a seek. */
+private const val NUDGE_MAX_MS = 40_000L
+/** Minimum spacing between corrective seeks. */
+private const val SEEK_MIN_INTERVAL_MS = 20_000L
+
 /**
  * Der Vorlauf gilt nur beim Einstieg mitten in ein laufendes Video.
  *
@@ -124,7 +133,9 @@ class VideoPlayerManager(
     private var reconnectAttempts = 0
     private var shouldPlayWhenReady = true
     private var lastPlaybackPosition: Long = 0L
+    private var nudgeStartedMs = 0L
     private var lastSeekTimestampMs: Long = 0L
+    private var nudgeStartedMs: Long = 0L
     private var mediaLoadedTimestampMs: Long = 0L
 
     init {
@@ -398,39 +409,40 @@ class VideoPlayerManager(
             val diffMs = targetMs - currentMs // positiv = wir hängen hinterher, negativ = wir sind voraus
             val absDiffMs = Math.abs(diffMs)
 
-            if (absDiffMs > 120000L && (now - lastSeekTimestampMs > 45000L)) {
-                // Nur bei extremen Desyncs (> 2 Minuten, z.B. manueller Playlist-Sprung): Harter Seek
+            // A/V drift fix: long stretches at 0.88x-1.12x let the hardware video decoder and
+            // the audio time-stretcher disagree on elapsed time, and audio slowly slid away from
+            // the picture. Anything beyond a tiny nudge is now a short seek (momentary stutter,
+            // but audio and video come back locked), and every nudge is time-limited.
+            if (absDiffMs >= SEEK_THRESHOLD_MS && (now - lastSeekTimestampMs > SEEK_MIN_INTERVAL_MS)) {
                 lastSeekTimestampMs = now
-                Log.d(TAG, "Syncing major desync (>120s) via seekTo: local=${currentMs}ms, target=${targetMs}ms (diff=${diffMs}ms)")
+                nudgeStartedMs = 0L
+                Log.d(TAG, "Resyncing via seekTo: local=${currentMs}ms, target=${targetMs}ms (diff=${diffMs}ms)")
                 player.setPlaybackSpeed(1.0f)
                 player.seekTo(targetMs)
-            } else if (absDiffMs >= 15000L && absDiffMs <= 120000L) {
-                // Große Abweichung (15s bis 120s): Stärkere Geschwindigkeitsanpassung (1.12x / 0.88x)
-                // Holt 1.2s Drift alle 10s auf — komplett ohne Decoder-Flush oder Bild-Einfrieren!
-                val speed = if (diffMs > 0) 1.12f else 0.88f
-                if (Math.abs(player.playbackParameters.speed - speed) > 0.01f) {
-                    Log.d(TAG, "Fast-nudging playback speed to ${speed}x (drift: ${diffMs}ms)")
-                    player.setPlaybackSpeed(speed)
+            } else if (absDiffMs >= NUDGE_THRESHOLD_MS && absDiffMs < SEEK_THRESHOLD_MS) {
+                // Small drift (1.2s - 4s): gentle 2% nudge, but never for more than NUDGE_MAX_MS.
+                if (nudgeStartedMs == 0L) nudgeStartedMs = now
+                if (now - nudgeStartedMs > NUDGE_MAX_MS && now - lastSeekTimestampMs > SEEK_MIN_INTERVAL_MS) {
+                    lastSeekTimestampMs = now
+                    nudgeStartedMs = 0L
+                    Log.d(TAG, "Nudge took too long, seeking instead (diff=${diffMs}ms)")
+                    player.setPlaybackSpeed(1.0f)
+                    player.seekTo(targetMs)
+                } else {
+                    val speed = if (diffMs > 0) 1.02f else 0.98f
+                    if (Math.abs(player.playbackParameters.speed - speed) > 0.01f) {
+                        Log.d(TAG, "Soft-nudging playback speed to ${speed}x (drift: ${diffMs}ms)")
+                        player.setPlaybackSpeed(speed)
+                    }
                 }
-            } else if (absDiffMs >= 4000L && absDiffMs < 15000L) {
-                // Mittlere Abweichung (4s bis 15s): Zügige Geschwindigkeitsanpassung (1.06x / 0.94x)
-                val speed = if (diffMs > 0) 1.06f else 0.94f
-                if (Math.abs(player.playbackParameters.speed - speed) > 0.01f) {
-                    Log.d(TAG, "Medium-nudging playback speed to ${speed}x (drift: ${diffMs}ms)")
-                    player.setPlaybackSpeed(speed)
-                }
-            } else if (absDiffMs >= 1200L && absDiffMs < 4000L) {
-                // Sanfte Abweichung (1.2s bis 4s): Sanfte Geschwindigkeitsanpassung (1.02x / 0.98x)
-                val speed = if (diffMs > 0) 1.02f else 0.98f
-                if (Math.abs(player.playbackParameters.speed - speed) > 0.01f) {
-                    Log.d(TAG, "Soft-nudging playback speed to ${speed}x (drift: ${diffMs}ms)")
-                    player.setPlaybackSpeed(speed)
-                }
-            } else if (absDiffMs < 1200L) {
-                // Perfekt im Sync (< 1.2s): Normalgeschwindigkeit 1.0x
+            } else if (absDiffMs < NUDGE_THRESHOLD_MS) {
+                // In sync: back to 1.0x. If we were nudging, re-lock audio to video with a
+                // seek to the current position - cheap, and it clears any accumulated offset.
                 if (player.playbackParameters.speed != 1.0f) {
                     player.setPlaybackSpeed(1.0f)
+                    player.seekTo(player.currentPosition)
                 }
+                nudgeStartedMs = 0L
             }
         }
     }
