@@ -108,13 +108,16 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         .flatMapLatest { active ->
             val rowFlows = KnownChannels.map { ch ->
                 val client = if (ch.room == active) socketClient else guideRepo.scout(ch.room)
-                combine(client.nowPlaying, client.playlist, client.connectionStatus) { np, pl, st ->
+                // The scraped schedule (bot / Reddit EPG) is Grindhouse-specific; other rooms
+                // get an empty fallback and rely purely on their CyTube queue.
+                val fallback = if (ch.room == "420Grindhouse") dataScraper.scheduleItems else MutableStateFlow(emptyList())
+                combine(client.nowPlaying, client.playlist, client.connectionStatus, fallback) { np, pl, st, sched ->
                     GuideChannel(
                         room = ch.room,
                         label = ch.label,
                         isActive = ch.room == active,
                         status = st,
-                        programs = GuideRepository.buildPrograms(np, pl, System.currentTimeMillis())
+                        programs = GuideRepository.buildPrograms(np, pl, System.currentTimeMillis(), sched)
                     )
                 }
             }
@@ -619,10 +622,20 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         scheduleGuideInfoLookup()
     }
 
+    private fun cleanGuideTitle(raw: String): String =
+        raw.replace(Regex("\\[[^\\]]*]"), " ")              // [1080p], [Remastered]
+            .replace(Regex("\\((?!\\d{4}\\))[^)]*\\)"), " ")   // (Director's Cut) but keep (1985)
+            .replace(Regex("(?i)\\b(1080p|720p|480p|2160p|4k|x264|x265|h264|h265|bluray|web-?dl|hdtv|dvdrip|brrip|remux)\\b"), " ")
+            .replace(Regex("(?i)\\.(mp4|mkv|avi|mov|webm)$"), " ")
+            .replace('.', ' ').replace('_', ' ')
+            .replace(Regex("\\s+"), " ")
+            .trim()
+
     private fun scheduleGuideInfoLookup() {
         guideInfoJob?.cancel()
         val program = guideChannels.value.getOrNull(_guideRow.value)?.programs?.getOrNull(_guideCol.value)
-        val title = program?.title ?: run { _guideMovieInfo.value = null; return }
+            ?: run { _guideMovieInfo.value = null; return }
+        val title = program.title
         if (guideInfoCache.containsKey(title)) {
             _guideMovieInfo.value = guideInfoCache[title]
             return
@@ -631,7 +644,16 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         if (!settings.value.movieInfoEnabled) return
         guideInfoJob = viewModelScope.launch {
             delay(350L) // debounce while the user is still moving
-            val info = runCatching { movieInfoRepo.lookup(title, useImdb = settings.value.imdbEnabled) }.getOrNull()
+            val useImdb = settings.value.imdbEnabled
+            val info = runCatching { movieInfoRepo.lookup(title, useImdb = useImdb) }.getOrNull()
+                // Retry with release-group / resolution tags stripped, e.g. "Movie (1985) [1080p]".
+                ?: cleanGuideTitle(title).takeIf { it.isNotBlank() && it != title }?.let { clean ->
+                    runCatching { movieInfoRepo.lookup(clean, useImdb = useImdb) }.getOrNull()
+                }
+                // YouTube items (trailers, bumpers) aren't in movie databases; ask YouTube instead.
+                ?: if (program.mediaType.lowercase() == "yt" && program.mediaId.isNotBlank()) {
+                    runCatching { movieInfoRepo.lookupYouTube(extractYouTubeId(program.mediaId)) }.getOrNull()
+                } else null
             guideInfoCache[title] = info
             _guideMovieInfo.value = info
         }

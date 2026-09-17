@@ -230,7 +230,9 @@ fun UpNextOverlay(
                                 fontSize = 10.sp,
                                 letterSpacing = 1.sp
                             ),
-                            modifier = Modifier.width(68.dp)
+                            maxLines = 1,
+                            softWrap = false,
+                            modifier = Modifier.width(76.dp)
                         )
                         Text(
                             text = stringResource(R.string.col_title),
@@ -250,7 +252,9 @@ fun UpNextOverlay(
                                 fontSize = 10.sp,
                                 letterSpacing = 1.sp
                             ),
-                            modifier = Modifier.width(56.dp)
+                            maxLines = 1,
+                            softWrap = false,
+                            modifier = Modifier.width(76.dp)
                         )
                     }
 
@@ -309,7 +313,7 @@ fun UpNextOverlay(
                                             fontSize = 11.sp,
                                             fontFamily = FontFamily.Monospace
                                         ),
-                                        modifier = Modifier.width(68.dp)
+                                        modifier = Modifier.width(76.dp)
                                     )
 
                                     // Title (No Numbering)
@@ -333,7 +337,7 @@ fun UpNextOverlay(
                                             fontSize = 11.sp,
                                             fontFamily = FontFamily.Monospace
                                         ),
-                                        modifier = Modifier.width(56.dp)
+                                        modifier = Modifier.width(76.dp)
                                     )
                                 }
 

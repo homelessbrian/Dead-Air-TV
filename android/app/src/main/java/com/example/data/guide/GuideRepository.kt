@@ -12,7 +12,9 @@ data class GuideProgram(
     val title: String,
     val startMs: Long,
     val endMs: Long,
-    val isCurrent: Boolean
+    val isCurrent: Boolean,
+    val mediaId: String = "",
+    val mediaType: String = ""
 ) {
     val durationMs: Long get() = endMs - startMs
 }
@@ -70,7 +72,12 @@ class GuideRepository(private val scope: CoroutineScope) {
          * Turn "what's playing + the playlist" into a timeline anchored at [nowMs].
          * The current item starts in the past by however far it has already played.
          */
-        fun buildPrograms(nowPlaying: MediaItem?, playlist: List<MediaItem>, nowMs: Long): List<GuideProgram> {
+        fun buildPrograms(
+            nowPlaying: MediaItem?,
+            playlist: List<MediaItem>,
+            nowMs: Long,
+            scheduleFallback: List<MediaItem> = emptyList()
+        ): List<GuideProgram> {
             val out = mutableListOf<GuideProgram>()
             var cursor = nowMs
 
@@ -78,15 +85,21 @@ class GuideRepository(private val scope: CoroutineScope) {
                 val dur = if (nowPlaying.durationSeconds > 0) nowPlaying.durationSeconds else FALLBACK_DURATION_SEC
                 val start = nowMs - (nowPlaying.currentTimeSeconds.coerceAtLeast(0.0) * 1000).toLong()
                 val end = start + (dur * 1000).toLong()
-                out += GuideProgram(nowPlaying.title, start, maxOf(end, nowMs + 30_000L), isCurrent = true)
+                out += GuideProgram(nowPlaying.title, start, maxOf(end, nowMs + 30_000L), true, nowPlaying.id, nowPlaying.type)
                 cursor = out.last().endMs
             }
 
-            val upcoming = remainingAfter(nowPlaying, playlist)
+            var upcoming = remainingAfter(nowPlaying, playlist)
+            if (upcoming.isEmpty() && scheduleFallback.isNotEmpty()) {
+                // Room exposes no queue (e.g. a bot that adds one item at a time): use the
+                // channel's published schedule instead, minus whatever is playing right now.
+                val curTitle = nowPlaying?.title?.trim()?.lowercase()
+                upcoming = scheduleFallback.filter { it.title.trim().lowercase() != curTitle }
+            }
             for (item in upcoming.take(MAX_PROGRAMS)) {
                 val dur = if (item.durationSeconds > 0) item.durationSeconds else FALLBACK_DURATION_SEC
                 val end = cursor + (dur * 1000).toLong()
-                out += GuideProgram(item.title, cursor, end, isCurrent = false)
+                out += GuideProgram(item.title, cursor, end, false, item.id, item.type)
                 cursor = end
             }
             return out
@@ -99,7 +112,8 @@ class GuideRepository(private val scope: CoroutineScope) {
                 (it.id.isNotBlank() && it.id == current.id) ||
                     (it.title.isNotBlank() && it.title == current.title)
             }
-            return if (idx != -1) playlist.drop(idx + 1)
+            // CyTube playlists loop, so after the last item comes the first one again.
+            return if (idx != -1) playlist.drop(idx + 1) + playlist.take(idx)
             else playlist.filter { it.id != current.id && it.title != current.title }
         }
     }
