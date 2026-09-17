@@ -33,7 +33,7 @@ class UpdateManager(private val context: Context) {
      * hosts the channel-z-tv repository. The release workflow keeps version.json current.
      */
     private val versionEndpoints = listOf(
-        "https://raw.githubusercontent.com/YOUR_GITHUB_USERNAME/channel-z-tv/main/version.json"
+        "https://raw.githubusercontent.com/homelessbrian/channel-z-tv/main/version.json"
     )
 
     /**
