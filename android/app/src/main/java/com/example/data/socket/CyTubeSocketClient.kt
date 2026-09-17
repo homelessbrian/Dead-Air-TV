@@ -363,6 +363,14 @@ class CyTubeSocketClient(
         return true
     }
 
+    /** Ask the room for its playlist, bypassing the once-a-minute throttle. */
+    private fun requestPlaylistNow() {
+        lastPlaylistRequestMs = System.currentTimeMillis()
+        val plPayload = JSONArray().apply { put("requestPlaylist") }
+        webSocket?.send("42$plPayload")
+        Log.d(TAG, "requestPlaylist sent (post-login)")
+    }
+
     private fun joinChannel() {
         val socket = webSocket ?: return
         try {
@@ -391,6 +399,9 @@ class CyTubeSocketClient(
         _loginState.value = if (success) {
             val name = data?.optString("name").orEmpty().ifEmpty { credentials?.first.orEmpty() }
             Log.d(TAG, "Angemeldet als $name")
+            // The playlist request sent right after joining went out as a guest, and rooms that
+            // hide their queue from guests refused it. Now that we're logged in, ask again.
+            handler.postDelayed({ requestPlaylistNow() }, 400)
             LoginState.LoggedIn(name)
         } else {
             val error = data?.optString("error").orEmpty()

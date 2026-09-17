@@ -278,11 +278,12 @@ fun GuideOverlay(
                                         text = plot,
                                         color = TextMuted,
                                         fontSize = 12.sp,
-                                        maxLines = 2,
+                                        maxLines = 1,
                                         overflow = TextOverflow.Ellipsis
                                     )
-                                } else if (movieInfo == null) {
-                                    // Diagnostics while there is nothing better to show.
+                                }
+                                run {
+                                    // Diagnostics (temporary while we chase the playlist issue).
                                     Spacer(Modifier.height(3.dp))
                                     val media = if (focusedProgram.mediaId.isNotBlank())
                                         "${focusedProgram.mediaType.ifBlank { "?" }}:${focusedProgram.mediaId.take(24)}" else "no media id"
