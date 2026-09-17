@@ -133,7 +133,6 @@ class VideoPlayerManager(
     private var reconnectAttempts = 0
     private var shouldPlayWhenReady = true
     private var lastPlaybackPosition: Long = 0L
-    private var nudgeStartedMs = 0L
     private var lastSeekTimestampMs: Long = 0L
     private var nudgeStartedMs: Long = 0L
     private var mediaLoadedTimestampMs: Long = 0L
