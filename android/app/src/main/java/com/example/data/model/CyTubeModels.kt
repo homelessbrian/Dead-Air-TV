@@ -87,6 +87,8 @@ data class MovieInfo(
     /** Bei Serienfolgen: Staffel und Folge, sofern im Titel angegeben. */
     val season: Int? = null,
     val episode: Int? = null,
+    /** Episode name, when the source filename carried one after the SxxExx marker. */
+    val episodeTitle: String? = null,
     /** Vorschaubilder von YouTube sind 16:9, Filmplakate hochkant — die Anzeige braucht das. */
     val posterIsWide: Boolean = false
 ) {

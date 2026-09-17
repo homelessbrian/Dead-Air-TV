@@ -27,6 +27,7 @@ import com.example.ui.nav.NavItem
 import com.example.ui.theme.applyPalette
 import com.example.data.repository.SettingsRepository
 import com.example.data.movie.MovieInfoRepository
+import com.example.data.movie.displayTitle
 import com.example.data.scraper.DataScraper
 import com.example.data.scraper.MetadataOverlayState
 import com.example.data.socket.CyTubeSocketClient
@@ -44,6 +45,7 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -85,12 +87,13 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     /** True after the user pressed LEFT on the currently-playing block: show its start time. */
     private val _guideScrolledBack = MutableStateFlow(false)
     val guideScrolledBack: StateFlow<Boolean> = _guideScrolledBack.asStateFlow()
-    private val _guideMovieInfo = MutableStateFlow<MovieInfo?>(null)
-    val guideMovieInfo: StateFlow<MovieInfo?> = _guideMovieInfo.asStateFlow()
-    private var guideInfoJob: Job? = null
-    private val guideInfoCache = mutableMapOf<String, MovieInfo?>()
-    val dataScraper = DataScraper(viewModelScope)
-    private val movieInfoRepo = MovieInfoRepository()
+    // Prefetched metadata for every queue item across all channels, keyed by the raw stream
+    // title. Refreshed on a timer so the guide never blocks on a per-item lookup.
+    private val _metadataByTitle = MutableStateFlow<Map<String, MovieInfo?>>(emptyMap())
+    val metadataByTitle: StateFlow<Map<String, MovieInfo?>> = _metadataByTitle.asStateFlow()
+    private val metaCache = mutableMapOf<String, MovieInfo?>()
+    private var metadataPrefetchJob: Job? = null
+
 
     private val _movieInfo = MutableStateFlow<MovieInfo?>(null)
     val movieInfo: StateFlow<MovieInfo?> = _movieInfo.asStateFlow()
@@ -143,6 +146,21 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
             combine(rowFlows) { it.toList() }
         }
         .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+
+    /** Metadata for the guide item under the cursor (looked up from the prefetched map). */
+    val guideMovieInfo: StateFlow<MovieInfo?> = combine(
+        _metadataByTitle, _guideRow, _guideCol, guideChannels
+    ) { map, row, col, channels ->
+        val title = channels.getOrNull(row)?.programs?.getOrNull(col)?.title ?: return@combine null
+        map[title]
+    }.stateIn(viewModelScope, SharingStarted.Eagerly, null)
+
+    /** Formatted display name for a raw stream title, using prefetched metadata if present. */
+    fun displayName(rawTitle: String): String =
+        displayTitle(rawTitle, _metadataByTitle.value[rawTitle])
+    val dataScraper = DataScraper(viewModelScope)
+    private val movieInfoRepo = MovieInfoRepository()
+
 
     val metadataOverlayState: StateFlow<MetadataOverlayState> = combine(
         socketClient.nowPlaying,
@@ -258,6 +276,16 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         // Keep guide scouts in step with whichever room is being watched.
         viewModelScope.launch {
             settings.map { it.roomName }.distinctUntilChanged().collect { guideRepo.setActiveRoom(it, settingsRepo.chatCredentials()) }
+        }
+
+        // Background metadata prefetch for the whole queue.
+        startMetadataPrefetch()
+        // Re-run the prefetch promptly when the set of queued titles changes.
+        viewModelScope.launch {
+            guideChannels
+                .map { chs -> chs.flatMap { it.programs.map { p -> p.title } }.toSet() }
+                .distinctUntilChanged()
+                .collect { runCatching { prefetchAllMetadata() } }
         }
         connectSocket()
 
@@ -633,7 +661,6 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         _guideCol.value = 0
         _guideScrolledBack.value = false
         _isGuideOpen.value = true
-        scheduleGuideInfoLookup()
     }
 
     fun closeGuide() {
@@ -650,7 +677,74 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         _guideScrolledBack.value = dCol < 0 && _guideCol.value == 0 && col == 0 && dRow == 0
         _guideRow.value = row
         _guideCol.value = col
-        scheduleGuideInfoLookup()
+    }
+
+    private fun cleanGuideTitle(raw: String): String =
+        raw.replace(Regex("\\[[^\\]]*]"), " ")              // [1080p], [Remastered]
+            .replace(Regex("\\((?!\\d{4}\\))[^)]*\\)"), " ")   // (Director's Cut) but keep (1985)
+            .replace(Regex("(?i)\\b(1080p|720p|480p|2160p|4k|x264|x265|h264|h265|bluray|web-?dl|hdtv|dvdrip|brrip|remux)\\b"), " ")
+            .replace(Regex("(?i)\\.(mp4|mkv|avi|mov|webm)$"), " ")
+            .replace('.', ' ').replace('_', ' ')
+            .replace(Regex("\\s+"), " ")
+            .trim()
+
+    // Every 20 minutes (and on open), resolve metadata for everything currently queued across
+    // all channels, in the background. Skips very short clips (< 5 min) and anything already
+    // resolved this session.
+    private fun startMetadataPrefetch() {
+        if (metadataPrefetchJob?.isActive == true) return
+        metadataPrefetchJob = viewModelScope.launch {
+            while (isActive) {
+                runCatching { prefetchAllMetadata() }
+                    .onFailure { Log.w(TAG, "metadata prefetch failed", it) }
+                delay(METADATA_REFRESH_MS)
+            }
+        }
+    }
+
+    private suspend fun prefetchAllMetadata() {
+        if (!settings.value.movieInfoEnabled) return
+        val useImdb = settings.value.imdbEnabled
+
+        // Gather every distinct queued item, carrying its duration and media identity.
+        data class Pending(val title: String, val durationSec: Double, val type: String, val id: String)
+        val pending = LinkedHashMap<String, Pending>()
+        for (ch in guideChannels.value) {
+            for (p in ch.programs) {
+                if (p.title.isBlank() || pending.containsKey(p.title)) continue
+                val durSec = (p.durationMs / 1000.0)
+                pending[p.title] = Pending(p.title, durSec, p.mediaType, p.mediaId)
+            }
+        }
+        if (pending.isEmpty()) return
+
+        val resolved = _metadataByTitle.value.toMutableMap()
+        for ((title, item) in pending) {
+            if (metaCache.containsKey(title)) { resolved[title] = metaCache[title]; continue }
+            // #7: don't spend a lookup on short clips (bumpers, trailers, idents).
+            if (item.durationSec in 0.1..MIN_METADATA_SECONDS) {
+                metaCache[title] = null; resolved[title] = null; continue
+            }
+            val info = resolveOne(title, item.type, item.id, useImdb)
+            metaCache[title] = info
+            resolved[title] = info
+            _metadataByTitle.value = resolved.toMap()   // publish incrementally so UI fills in
+            delay(120L)                                  // be gentle on the metadata hosts
+        }
+    }
+
+    private suspend fun resolveOne(title: String, type: String, id: String, useImdb: Boolean): MovieInfo? {
+        var info = runCatching { movieInfoRepo.lookup(title, useImdb = useImdb) }.getOrNull()
+        if (info == null) {
+            val clean = cleanGuideTitle(title)
+            if (clean.isNotBlank() && clean != title) {
+                info = runCatching { movieInfoRepo.lookup(clean, useImdb = useImdb) }.getOrNull()
+            }
+        }
+        if (info == null && type.lowercase() == "yt" && id.isNotBlank()) {
+            info = runCatching { movieInfoRepo.lookupYouTube(extractYouTubeId(id)) }.getOrNull()
+        }
+        return info
     }
 
     private fun cleanGuideTitle(raw: String): String =

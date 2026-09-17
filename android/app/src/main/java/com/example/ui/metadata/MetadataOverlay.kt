@@ -66,6 +66,7 @@ import com.example.ui.components.formatClock
 import com.example.ui.components.MoviePoster
 import com.example.ui.components.posterCandidates
 import com.example.data.model.KnownChannels
+import com.example.data.movie.displayTitle
 import com.example.ui.theme.SurfaceCard
 import com.example.ui.theme.SurfaceDark
 
@@ -155,9 +156,10 @@ fun MetadataOverlay(
                                 )
                             )
                             Spacer(modifier = Modifier.height(2.dp))
-                            val displayTitle = movieInfo?.title?.takeIf { it.isNotBlank() }
-                                ?: nowPlaying?.title
-                                ?: stringResource(R.string.no_media_queued)
+                            val displayTitle = when {
+                                nowPlaying != null -> displayTitle(nowPlaying.title, movieInfo)
+                                else -> stringResource(R.string.no_media_queued)
+                            }
                             Text(
                                 text = displayTitle,
                                 style = TextStyle(

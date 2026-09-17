@@ -70,6 +70,7 @@ fun UpNextOverlay(
     isVisible: Boolean,
     queueItems: List<QueueScheduleItem>,
     nowPlaying: MediaItem? = null,
+    displayName: (String) -> String = { it },
     use24HourClock: Boolean = false,
     redditScheduleTitle: String? = null,
     redditScheduleText: String? = null,
@@ -331,7 +332,7 @@ fun UpNextOverlay(
                                                 )
                                             )
                                             Text(
-                                                text = nowPlaying.title,
+                                                text = displayName(nowPlaying.title),
                                                 style = TextStyle(
                                                     color = PureWhite,
                                                     fontWeight = FontWeight.SemiBold,
@@ -378,9 +379,9 @@ fun UpNextOverlay(
                                         modifier = Modifier.width(76.dp)
                                     )
 
-                                    // Title (No Numbering)
+                                    // Title (formatted from metadata if available)
                                     Text(
-                                        text = item.title,
+                                        text = displayName(item.title),
                                         style = TextStyle(
                                             color = TextSubtitleWhite,
                                             fontWeight = FontWeight.Normal,

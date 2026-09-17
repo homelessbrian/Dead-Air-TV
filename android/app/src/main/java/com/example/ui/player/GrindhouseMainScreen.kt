@@ -122,6 +122,7 @@ fun GrindhouseMainScreen(
     val guideChannels by viewModel.guideChannels.collectAsStateWithLifecycle()
     val guideScrolledBack by viewModel.guideScrolledBack.collectAsStateWithLifecycle()
     val guideMovieInfo by viewModel.guideMovieInfo.collectAsStateWithLifecycle()
+    val metadataByTitle by viewModel.metadataByTitle.collectAsStateWithLifecycle()
     val settingsPage by viewModel.settingsPage.collectAsStateWithLifecycle()
     val movieInfo by viewModel.movieInfo.collectAsStateWithLifecycle()
     val isTriviaVisible by viewModel.isTriviaVisible.collectAsStateWithLifecycle()
@@ -309,6 +310,7 @@ fun GrindhouseMainScreen(
                     isVisible = isUpNextVisible,
                     queueItems = metadataOverlayState.queueItems,
                     nowPlaying = metadataOverlayState.nowPlaying,
+                    displayName = { viewModel.displayName(it) },
                     use24HourClock = settings.use24HourClock,
                     redditScheduleTitle = metadataOverlayState.redditScheduleTitle,
                     redditScheduleText = metadataOverlayState.redditScheduleText,
@@ -606,6 +608,7 @@ fun GrindhouseMainScreen(
                     focusCol = guideCol,
                     scrolledBack = guideScrolledBack,
                     movieInfo = guideMovieInfo,
+                    displayNameFor = { program -> viewModel.displayName(program.title) },
                     use24HourClock = settings.use24HourClock,
                     isTv = isTv,
                     onProgramClick = { r, c -> viewModel.guideSelect(r, c) },

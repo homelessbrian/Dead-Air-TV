@@ -4,6 +4,8 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -67,6 +69,7 @@ private const val MS_PER_MIN = 60_000L
  * Full-screen programme grid: channels down the left, time across the top.
  * Purely state-driven; the Activity moves [focusRow]/[focusCol] with the D-pad.
  */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun GuideOverlay(
     isVisible: Boolean,
@@ -75,6 +78,7 @@ fun GuideOverlay(
     focusCol: Int,
     scrolledBack: Boolean = false,
     movieInfo: MovieInfo? = null,
+    displayNameFor: (GuideProgram) -> String = { it.title },
     use24HourClock: Boolean,
     isTv: Boolean,
     onProgramClick: (row: Int, col: Int) -> Unit = { _, _ -> },
@@ -191,6 +195,7 @@ fun GuideOverlay(
                                                 if (visEnd <= visStart) return@forEachIndexed
                                                 ProgramCell(
                                                     program = p,
+                                                    label = displayNameFor(p),
                                                     focused = rowFocused && col == focusCol,
                                                     clippedLeft = p.startMs < windowStartMs,
                                                     modifier = Modifier
@@ -240,15 +245,15 @@ fun GuideOverlay(
                             )
                             Spacer(Modifier.width(14.dp))
                             Column(modifier = Modifier.weight(1f)) {
-                                val displayTitle = movieInfo?.title?.takeIf { it.isNotBlank() } ?: focusedProgram.title
-                                val year = movieInfo?.year?.let { "  ($it)" } ?: ""
                                 Text(
-                                    text = displayTitle + year,
+                                    text = displayNameFor(focusedProgram),
                                     color = PureWhite,
                                     fontSize = if (isTv) 18.sp else 15.sp,
                                     fontWeight = FontWeight.Bold,
                                     maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
+                                    softWrap = false,
+                                    overflow = TextOverflow.Clip,
+                                    modifier = Modifier.fillMaxWidth().basicMarquee()
                                 )
                                 Spacer(Modifier.height(3.dp))
                                 val range = formatClock(focusedProgram.startMs, use24HourClock) + " – " +
@@ -273,8 +278,10 @@ fun GuideOverlay(
                                         text = plot,
                                         color = TextMuted,
                                         fontSize = 12.sp,
-                                        maxLines = 2,
-                                        overflow = TextOverflow.Ellipsis
+                                        maxLines = 1,
+                                        softWrap = false,
+                                        overflow = TextOverflow.Clip,
+                                        modifier = Modifier.fillMaxWidth().basicMarquee()
                                     )
                                 }
                             }
@@ -322,20 +329,22 @@ private fun ChannelCell(ch: GuideChannel, focused: Boolean, modifier: Modifier) 
                 )
         )
         Spacer(Modifier.width(10.dp))
-        Column {
+        Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = ch.label,
                 color = PureWhite,
                 fontSize = 14.sp,
                 fontWeight = FontWeight.Bold,
                 maxLines = 1,
+                softWrap = false,
                 overflow = TextOverflow.Ellipsis
             )
             if (ch.isActive) {
                 Text(
                     text = stringResource(R.string.guide_watching),
                     color = AccentLavender,
-                    fontSize = 10.sp,
+                    fontSize = 9.sp,
+                    maxLines = 1,
                     letterSpacing = 1.sp
                 )
             }
@@ -346,6 +355,7 @@ private fun ChannelCell(ch: GuideChannel, focused: Boolean, modifier: Modifier) 
 @Composable
 private fun ProgramCell(
     program: GuideProgram,
+    label: String,
     focused: Boolean,
     clippedLeft: Boolean,
     modifier: Modifier,
@@ -367,7 +377,7 @@ private fun ProgramCell(
         contentAlignment = Alignment.CenterStart
     ) {
         Text(
-            text = (if (clippedLeft) "‹ " else "") + program.title,
+            text = (if (clippedLeft) "‹ " else "") + label,
             color = if (focused || program.isCurrent) PureWhite else PureWhite.copy(alpha = 0.8f),
             fontSize = 13.sp,
             fontWeight = if (focused || program.isCurrent) FontWeight.SemiBold else FontWeight.Normal,

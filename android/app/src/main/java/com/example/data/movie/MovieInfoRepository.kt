@@ -162,7 +162,73 @@ class MovieInfoRepository(
         val season: Int? = null,
         val episode: Int? = null,
         /** Other names the same work goes by, e.g. the part after "aka". */
-        val alternates: List<String> = emptyList()
+        val alternates: List<String> = emptyList(),
+        /** Episode name parsed from the filename tail, if any. */
+        val episodeName: String? = null
+    ) {
+        /** Every name worth searching, most likely first. */
+        fun variants(): List<String> {
+            val out = mutableListOf(title)
+            out += alternates
+            // "Title with Host" / "Title: Subtitle" / "Title - Extra" — try the bare title too.
+            out += title.replace(Regex("""\s+with\s+.*$""", RegexOption.IGNORE_CASE), "")
+            out += title.substringBefore(":")
+            out += title.substringBefore(" - ")
+            return out.map { it.trim(' ', '-', '–', '—', ',', ':') }.filter { it.length >= 2 }.distinct()
+        }
+    }
+
+    /**
+     * Schaelt aus einem rohen Titel den Werktitel heraus — bei Serien den Namen der Serie.
+     *
+     * Der Kanal mischt Dateinamen und YouTube-Titel, und die Folgenkennzeichnung sieht jedes
+     * Mal anders aus. Diese Schreibweisen kommen dort tatsaechlich vor:
+     *
+     *   Archer S01E10 Dial M for Mother.mp4
+     *   Werewolf 1x22 Skinwalker
+     *   Swamp Thing    Episode10 Season 1   New Acquaintance
+     *   Unsolved Mysteries with Robert Stack - Season 1 Episode 20 - Full Episode
+     *   The Tomorrow People (1992) | The Rameses Connection Ep. 5 | 4K A.I. Remaster
+     *
+     * Aus allen fuenf muss der Serienname fallen, sonst sucht die Datenbank ins Leere und die
+     * Folge steht ohne Angaben da — waehrend Filme welche haben.
+     */
+    /** Trivia wird erst geholt, wenn jemand sie sehen will — die Listen sind lang. */
+    suspend fun loadTrivia(imdbId: String, limit: Int = 25): List<String> = withContext(ioDispatcher) {
+        val query = """
+            query GHTrivia(${'$'}id: ID!) {
+              title(id: ${'$'}id) { trivia(first: $limit) { edges { node { text { plainText } } } } }
+            }
+        """.trimIndent()
+        try {
+            val root = imdbQuery("GHTrivia", query, imdbId) ?: return@withContext emptyList()
+            val edges = root.optJSONObject("data")?.optJSONObject("title")
+                ?.optJSONObject("trivia")?.optJSONArray("edges") ?: return@withContext emptyList()
+            buildList {
+                for (i in 0 until edges.length()) {
+                    val text = edges.optJSONObject(i)?.optJSONObject("node")
+                        ?.optJSONObject("text")?.optString("plainText").orEmpty().trim()
+                    if (text.isNotEmpty()) add(text)
+                }
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "Trivia-Abfrage fehlgeschlagen fuer $imdbId: ${e.message}")
+            emptyList()
+        }
+    }
+
+    // ---------------------------------------------------------------- Titel
+
+    data class ParsedTitle(
+        val title: String,
+        val year: Int?,
+        val isEpisode: Boolean,
+        val season: Int? = null,
+        val episode: Int? = null,
+        /** Other names the same work goes by, e.g. the part after "aka". */
+        val alternates: List<String> = emptyList(),
+        /** Episode name parsed from the filename tail, if any. */
+        val episodeName: String? = null
     ) {
         /** Every name worth searching, most likely first. */
         fun variants(): List<String> {
@@ -243,11 +309,18 @@ class MovieInfoRepository(
         var season: Int? = null
         var episodeNo: Int? = null
         var cutAt: Int? = null
+        var episodeName: String? = null
         for ((pattern, groups) in patterns) {
             val hit = pattern.find(s) ?: continue
             season = if (groups.first > 0) hit.groupValues.getOrNull(groups.first)?.toIntOrNull() else null
             episodeNo = hit.groupValues.getOrNull(groups.second)?.toIntOrNull()
             cutAt = hit.range.first
+            // Text after the marker is usually the episode name ("... S04E05 - Mr. Neutron").
+            val tail = s.substring(hit.range.last + 1)
+                .replace(Regex("""[._]+"""), " ")
+                .replace(Regex("""\b(1080p|720p|480p|x264|x265|web-?dl|hdtv)\b""", RegexOption.IGNORE_CASE), " ")
+                .trim(' ', '-', '–', '—', ':', ',')
+            if (tail.length in 2..60 && !tail.matches(Regex("""(?i)episode\s*\d+"""))) episodeName = tail
             break
         }
         if (cutAt != null) s = s.substring(0, cutAt)
@@ -263,7 +336,7 @@ class MovieInfoRepository(
             .replace(Regex("""\s{2,}"""), " ")
             .trim(' ', '-', '–', '—', ',', '|')
 
-        return ParsedTitle(s, year, cutAt != null, season, episodeNo, alternates)
+        return ParsedTitle(s, year, cutAt != null, season, episodeNo, alternates, episodeName)
     }
 
     /** From the text after a year, keep only an "aka …" alternate (as the aka marker + name). */
@@ -354,6 +427,7 @@ class MovieInfoRepository(
             query = parsed.title,
             season = parsed.season,
             episode = parsed.episode,
+            episodeTitle = parsed.episodeName,
             title = entity.optJSONObject("labels")?.optJSONObject("en")?.optString("value")
                 ?: parsed.title,
             year = years.firstOrNull() ?: parsed.year,
@@ -506,6 +580,7 @@ class MovieInfoRepository(
             query = parsed.title,
             season = parsed.season,
             episode = parsed.episode,
+            episodeTitle = parsed.episodeName,
             title = best.title,
             year = best.year ?: parsed.year,
             imdbId = best.id
@@ -643,4 +718,31 @@ class MovieInfoRepository(
         const val USER_AGENT =
             "DeadAir/1.0"
     }
+}
+
+// ---- Display formatting (usable from composables without a repository instance) ----
+
+fun displayTitle(rawFilename: String, info: MovieInfo?): String {
+    if (info?.title.isNullOrBlank()) return prettyFilename(rawFilename)
+    val base = info!!.title!!.trim()
+    val season = info.season
+    val episode = info.episode
+    val epName = info.episodeTitle?.takeIf { it.isNotBlank() }
+    return buildString {
+        append(base)
+        if (epName != null) append(" - ").append(epName)
+        if (season != null && episode != null) append(" - S%02dE%02d".format(season, episode))
+        else if (episode != null) append(" - E%02d".format(episode))
+        else if (info.year != null && epName == null) append(" (").append(info.year).append(")")
+    }
+}
+
+fun prettyFilename(raw: String): String {
+    var s = raw.trim().replace(Regex("""\.(mp4|mkv|avi|webm|mov|m4v)$""", RegexOption.IGNORE_CASE), "")
+    s = s.replace(Regex("""[._]+"""), " ")
+        .replace(Regex("""\b(1080p|720p|480p|2160p|4k|bluray|blu-ray|brrip|dvdrip|webrip|web-dl|hdtv|x264|x265|h264|h265|hevc|aac|ac3)\b""", RegexOption.IGNORE_CASE), " ")
+        .replace(Regex("""\s+[-–—]\s*\w+\s*$"""), " ")
+        .replace(Regex("""\s{2,}"""), " ")
+        .trim(' ', '-', '–', '—', ',', '_')
+    return s.ifBlank { raw }
 }
