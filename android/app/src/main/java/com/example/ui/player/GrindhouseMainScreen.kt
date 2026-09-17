@@ -130,6 +130,7 @@ fun GrindhouseMainScreen(
     val chatLayout by viewModel.chatLayout.collectAsStateWithLifecycle()
     val loginState by viewModel.loginState.collectAsStateWithLifecycle()
     val savedChatUsername by viewModel.savedChatUsername.collectAsStateWithLifecycle()
+    val webQueueState by viewModel.webQueueState.collectAsStateWithLifecycle()
     val emotes by viewModel.emotes.collectAsStateWithLifecycle()
     val showExitDialog by viewModel.showExitDialog.collectAsStateWithLifecycle()
     val mediaSyncUpdate by viewModel.mediaSyncEvent.collectAsStateWithLifecycle(initialValue = null)
@@ -644,6 +645,9 @@ fun GrindhouseMainScreen(
                     savedChatUsername = savedChatUsername,
                     onLoginChat = { name, pw -> viewModel.login(name, pw) },
                     onLogoutChat = { viewModel.logout() },
+                    webQueueState = webQueueState,
+                    onWebQueueLink = { viewModel.webQueueLink(it) },
+                    onWebQueueDisconnect = { viewModel.webQueueDisconnect() },
                     onToggleImdb = { viewModel.toggleImdb() },
                     onUpdateOpacity = { viewModel.updateChatOpacity(it) },
                     onUpdateFontSize = { viewModel.updateChatFontSize(it) },

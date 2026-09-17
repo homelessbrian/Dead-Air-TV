@@ -195,4 +195,18 @@
     <string name="guide_footer_hint">▲▼ Kanal · ◄► Sendung · OK wechseln · ZURÜCK schließen</string>
     <string name="guide_no_schedule">Nichts geplant</string>
     <string name="guide_loading">Verbinde…</string>
+    <string name="settings_webqueue">Channel-Z Web-Warteschlange</string>
+    <string name="settings_webqueue_sub">Channel-Z-Warteschlange im TV-Programm anzeigen</string>
+    <string name="webqueue_status_connected">Verbunden als %1$s</string>
+    <string name="webqueue_status_failed">Nicht verbunden: %1$s</string>
+    <string name="webqueue_status_disconnected">Nicht verbunden</string>
+    <string name="webqueue_btn_disconnect">TRENNEN</string>
+    <string name="webqueue_code">Verknüpfungscode</string>
+    <string name="webqueue_about">Channel-Z führt seine Warteschlange über eine separate Web-Warteschlange. Nach dem Verknüpfen zeigen TV-Programm und Als Nächstes, was auf Channel-Z kommt – mit Cover. Die Verknüpfung bleibt, bis sie hier oder auf der Seite getrennt wird.</string>
+    <string name="webqueue_status_linking">Gerät wird verknüpft…</string>
+    <string name="webqueue_linked_as">Verknüpft als Gerät „%1$s“ · OK zum Trennen</string>
+    <string name="webqueue_link_hint">Nicht verknüpft — unten einen Code von der Warteschlangen-Seite eingeben</string>
+    <string name="webqueue_link_title">Diesen Fernseher verknüpfen</string>
+    <string name="webqueue_link_steps">Auf Handy oder PC bei der Channel-Z-Warteschlange anmelden, „Link a Device“ öffnen, ein Gerät benennen und den 5-stelligen Code hier innerhalb von 10 Minuten eingeben.</string>
+    <string name="webqueue_btn_link">Verknüpfen</string>
 </resources>

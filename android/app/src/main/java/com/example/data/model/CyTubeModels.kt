@@ -43,7 +43,9 @@ data class MediaItem(
     val currentTimeSeconds: Double = 0.0,
     val paused: Boolean = false,
     val directUrl: String = "",
-    val subtitleTracks: List<SubtitleTrack> = emptyList()
+    val subtitleTracks: List<SubtitleTrack> = emptyList(),
+    /** Artwork supplied by an external queue (e.g. kryten-webqueue); empty when unknown. */
+    val posterUrl: String = ""
 ) {
     val isWebStream: Boolean
         get() {
@@ -98,6 +100,7 @@ enum class SettingsPage {
     MAIN,
     CHAT_APPEARANCE,
     CHAT_ACCOUNT,
+    WEB_QUEUE,
     THEME,
     BUG_REPORT
 }

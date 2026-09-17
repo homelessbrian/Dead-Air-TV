@@ -13,6 +13,9 @@ import com.example.data.model.ChatMessage
 import com.example.data.model.KnownChannels
 import com.example.data.guide.GuideChannel
 import com.example.data.guide.GuideRepository
+import com.example.data.webqueue.WebQueueRepository
+import com.example.data.webqueue.WebQueueState
+import com.example.data.webqueue.WebQueueItem
 import com.example.data.model.LoginState
 import com.example.data.model.ConnectionStatus
 import com.example.data.model.MediaItem
@@ -60,6 +63,17 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
 
     private val socketClient = CyTubeSocketClient(viewModelScope)
     private val guideRepo = GuideRepository(viewModelScope)
+
+    // ---------------- Channel-Z web queue (kryten-webqueue) ----------------
+    val webQueueRepo = WebQueueRepository(application, viewModelScope)
+    val webQueueState: StateFlow<WebQueueState> = webQueueRepo.state
+    val webQueueItems: StateFlow<List<WebQueueItem>> = webQueueRepo.items
+
+    fun webQueueLink(code: String) {
+        viewModelScope.launch { webQueueRepo.link(code) }
+    }
+
+    fun webQueueDisconnect() = webQueueRepo.disconnect()
 
     // ---------------- TV Guide ----------------
     private val _isGuideOpen = MutableStateFlow(false)
@@ -113,7 +127,11 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
                 val client = if (ch.room == active) socketClient else guideRepo.scout(ch.room)
                 // The scraped schedule (bot / Reddit EPG) is Grindhouse-specific; other rooms
                 // get an empty fallback and rely purely on their CyTube queue.
-                val fallback = if (ch.room == "420Grindhouse") dataScraper.scheduleItems else MutableStateFlow(emptyList())
+                val fallback = when (ch.room) {
+                    "420Grindhouse" -> dataScraper.scheduleItems
+                    "Channel-Z" -> webQueueRepo.items.map { list -> list.map { it.media } }
+                    else -> MutableStateFlow(emptyList())
+                }
                 combine(client.nowPlaying, client.playlist, client.connectionStatus, fallback) { np, pl, st, sched ->
                     GuideChannel(
                         room = ch.room,
@@ -139,7 +157,8 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         dataScraper.redditScheduleText,
         dataScraper.isRedditFallback,
         socketClient.userCount,
-        settings
+        settings,
+        webQueueRepo.items
     ) { args: Array<Any?> ->
         val now = args[0] as? MediaItem
         @Suppress("UNCHECKED_CAST")
@@ -155,12 +174,20 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         val isReddit = args[7] as? Boolean ?: false
         val users = args[8] as? Int ?: 0
         val cfg = args[9] as? AppSettings ?: AppSettings()
+        @Suppress("UNCHECKED_CAST")
+        val webQueue = if (cfg.roomName == "Channel-Z") (args[10] as? List<WebQueueItem> ?: emptyList()) else emptyList()
 
         // Rangfolge: die per Socket gelieferte Raum-Playlist ist die tatsaechliche Warteschlange
         // und hat Vorrang. Der Reddit-EPG ist nur ein Notbehelf mit geschaetzten Laufzeiten
         // (pauschal 90 Minuten) und ab "jetzt" hochgerechneten Startzeiten — vorher hat er die
         // echten Daten 15 Sekunden nach dem Start ueberschrieben.
-        val socketCandidates = if (socketNext.isNotEmpty()) socketNext else socketPlaylist
+        // Channel-Z keeps its queue in kryten-webqueue rather than the CyTube playlist; when the
+        // room reports nothing, use the web queue (it carries the server's own start estimates).
+        val socketCandidates = when {
+            socketNext.isNotEmpty() -> socketNext
+            socketPlaylist.isNotEmpty() -> socketPlaylist
+            else -> webQueue.map { it.media }
+        }
         val socketQueue = buildQueueScheduleFromSocket(now, socketCandidates)
 
         val finalNext = when {

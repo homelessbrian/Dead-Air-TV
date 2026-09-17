@@ -16,6 +16,8 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
@@ -76,6 +78,10 @@ class CyTubeSocketClient(
     val userCount: StateFlow<Int> = _userCount.asStateFlow()
 
     private val _chatMessages = MutableStateFlow<List<ChatMessage>>(emptyList())
+
+    /** Private messages (sender to raw text), e.g. one-time login codes from room bots. */
+    private val _privateMessages = MutableSharedFlow<Pair<String, String>>(extraBufferCapacity = 8)
+    val privateMessages: SharedFlow<Pair<String, String>> = _privateMessages
     val chatMessages: StateFlow<List<ChatMessage>> = _chatMessages.asStateFlow()
 
     private val _users = MutableStateFlow<List<ChannelUser>>(emptyList())
@@ -251,6 +257,15 @@ class CyTubeSocketClient(
                         "chatMsg" -> {
                             val data = eventArray.optJSONObject(1)
                             if (data != null) handleIncomingChat(data)
+                        }
+                        "pm" -> {
+                            val data = eventArray.optJSONObject(1)
+                            if (data != null) {
+                                val from = data.optString("username")
+                                val msg = data.optString("msg")
+                                Log.d(TAG, "PM from $from")
+                                _privateMessages.tryEmit(from to msg)
+                            }
                         }
                         "changeMedia", "setCurrent" -> {
                             val data = eventArray.optJSONObject(1)

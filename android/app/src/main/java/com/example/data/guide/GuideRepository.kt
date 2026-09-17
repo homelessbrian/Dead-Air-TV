@@ -14,7 +14,8 @@ data class GuideProgram(
     val endMs: Long,
     val isCurrent: Boolean,
     val mediaId: String = "",
-    val mediaType: String = ""
+    val mediaType: String = "",
+    val posterUrl: String = ""
 ) {
     val durationMs: Long get() = endMs - startMs
 }
@@ -113,7 +114,7 @@ class GuideRepository(private val scope: CoroutineScope) {
             for (item in upcoming.take(MAX_PROGRAMS)) {
                 val dur = if (item.durationSeconds > 0) item.durationSeconds else FALLBACK_DURATION_SEC
                 val end = cursor + (dur * 1000).toLong()
-                out += GuideProgram(item.title, cursor, end, false, item.id, item.type)
+                out += GuideProgram(item.title, cursor, end, false, item.id, item.type, item.posterUrl)
                 cursor = end
             }
             return out

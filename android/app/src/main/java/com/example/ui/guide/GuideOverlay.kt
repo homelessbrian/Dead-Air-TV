@@ -231,7 +231,7 @@ fun GuideOverlay(
                 ) {
                     if (focusedProgram != null && focusedChannel != null) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            val poster = movieInfo?.posterUrl
+                            val poster = movieInfo?.posterUrl?.takeIf { it.isNotBlank() } ?: focusedProgram.posterUrl
                             if (!poster.isNullOrBlank()) {
                                 AsyncImage(
                                     model = poster,

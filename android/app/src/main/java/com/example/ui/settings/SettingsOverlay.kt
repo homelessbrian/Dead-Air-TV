@@ -85,6 +85,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -94,6 +95,8 @@ import com.example.data.model.AppSettings
 import com.example.data.model.ChatLayout
 import com.example.data.model.LoginState
 import com.example.data.model.SettingsPage
+import com.example.data.webqueue.WebQueueState
+import androidx.compose.material.icons.filled.Queue
 import com.example.data.report.BugReporter
 import com.example.data.update.UpdateInfo
 import com.example.data.update.UpdateManager
@@ -136,6 +139,9 @@ fun SettingsOverlay(
     savedChatUsername: String = "",
     onLoginChat: (String, String) -> Unit = { _, _ -> },
     onLogoutChat: () -> Unit = {},
+    webQueueState: WebQueueState = WebQueueState.Disconnected,
+    onWebQueueLink: (String) -> Unit = {},
+    onWebQueueDisconnect: () -> Unit = {},
     onToggleImdb: () -> Unit = {},
     onUpdateOpacity: (Float) -> Unit,
     onUpdateFontSize: (Int) -> Unit,
@@ -689,6 +695,133 @@ fun SettingsOverlay(
                                         )
                                     }
                                 }
+                            }
+
+                            item {
+                                FocusableSettingsItem(
+                                    title = stringResource(R.string.settings_webqueue),
+                                    subtitle = when (webQueueState) {
+                                        is WebQueueState.Connected -> stringResource(R.string.webqueue_status_connected, webQueueState.username)
+                                        is WebQueueState.Failed -> webQueueState.message
+                                        else -> stringResource(R.string.settings_webqueue_sub)
+                                    },
+                                    icon = Icons.Default.Queue,
+                                    onClick = { onOpenPage(SettingsPage.WEB_QUEUE) }
+                                ) {
+                                    Text(
+                                        text = "›",
+                                        color = AccentIceBlue,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 20.sp,
+                                        modifier = Modifier.padding(horizontal = 10.dp)
+                                    )
+                                }
+                            }
+                        } else if (settingsPage == SettingsPage.WEB_QUEUE) {
+                            item {
+                                FocusableSettingsItem(
+                                    title = stringResource(R.string.action_back),
+                                    subtitle = stringResource(R.string.settings_webqueue),
+                                    icon = Icons.AutoMirrored.Filled.ArrowBack,
+                                    onClick = { onOpenPage(SettingsPage.MAIN) },
+                                    modifier = Modifier
+                                        .focusRequester(firstItemFocusRequester)
+                                        .focusProperties {
+                                            up = closeButtonFocusRequester
+                                        }
+                                ) {}
+                            }
+
+                            item {
+                                val connected = webQueueState as? WebQueueState.Connected
+                                FocusableSettingsItem(
+                                    title = when (webQueueState) {
+                                        is WebQueueState.Connected -> stringResource(R.string.webqueue_status_connected, webQueueState.username)
+                                        WebQueueState.Linking -> stringResource(R.string.webqueue_status_linking)
+                                        is WebQueueState.Failed -> stringResource(R.string.webqueue_status_failed, webQueueState.message)
+                                        WebQueueState.Disconnected -> stringResource(R.string.webqueue_status_disconnected)
+                                    },
+                                    subtitle = if (connected != null)
+                                        stringResource(R.string.webqueue_linked_as, connected.deviceName.ifBlank { "TV" })
+                                    else stringResource(R.string.webqueue_link_hint),
+                                    icon = Icons.Default.Queue,
+                                    onClick = { if (connected != null) onWebQueueDisconnect() }
+                                ) {
+                                    if (connected != null) {
+                                        Surface(color = AccentVibrantOrange, shape = RoundedCornerShape(8.dp)) {
+                                            Text(
+                                                text = stringResource(R.string.webqueue_btn_disconnect),
+                                                color = PureWhite,
+                                                fontSize = 12.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+
+                            if (webQueueState !is WebQueueState.Connected) {
+                                item {
+                                    var codeDraft by remember { mutableStateOf("") }
+                                    val canSubmit = codeDraft.trim().length >= 5 && webQueueState !is WebQueueState.Linking
+                                    Surface(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        color = SurfaceCard,
+                                        shape = RoundedCornerShape(12.dp),
+                                        border = BorderStroke(1.dp, SubtleBorder)
+                                    ) {
+                                        Column(
+                                            modifier = Modifier.padding(16.dp),
+                                            verticalArrangement = Arrangement.spacedBy(10.dp)
+                                        ) {
+                                            Text(
+                                                text = stringResource(R.string.webqueue_link_title),
+                                                color = PureWhite,
+                                                fontWeight = FontWeight.Bold,
+                                                fontSize = 14.sp
+                                            )
+                                            Text(
+                                                text = stringResource(R.string.webqueue_link_steps),
+                                                color = TextMuted,
+                                                fontSize = 11.sp
+                                            )
+                                            OutlinedTextField(
+                                                value = codeDraft,
+                                                onValueChange = { codeDraft = it.uppercase().take(5) },
+                                                label = { Text(stringResource(R.string.webqueue_code)) },
+                                                singleLine = true,
+                                                keyboardOptions = KeyboardOptions(
+                                                    capitalization = KeyboardCapitalization.Characters,
+                                                    imeAction = ImeAction.Done
+                                                ),
+                                                keyboardActions = KeyboardActions(onDone = {
+                                                    if (canSubmit) onWebQueueLink(codeDraft.trim())
+                                                }),
+                                                modifier = Modifier.fillMaxWidth()
+                                            )
+                                            TextButton(
+                                                onClick = { onWebQueueLink(codeDraft.trim()) },
+                                                enabled = canSubmit
+                                            ) {
+                                                Text(
+                                                    text = stringResource(R.string.webqueue_btn_link),
+                                                    color = AccentPurple,
+                                                    fontWeight = FontWeight.Bold
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+
+                            item {
+                                Text(
+                                    text = stringResource(R.string.webqueue_about),
+                                    color = TextMuted,
+                                    fontSize = 11.sp,
+                                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 8.dp)
+                                )
                             }
                         } else if (settingsPage == SettingsPage.BUG_REPORT) {
                             item {

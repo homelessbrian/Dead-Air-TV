@@ -194,4 +194,18 @@
     <string name="guide_footer_hint">▲▼ channel · ◄► programme · OK switch · BACK close</string>
     <string name="guide_no_schedule">Nothing queued</string>
     <string name="guide_loading">Connecting…</string>
+    <string name="settings_webqueue">Channel-Z Web Queue</string>
+    <string name="settings_webqueue_sub">Show the Channel-Z request queue in the TV guide</string>
+    <string name="webqueue_status_connected">Web queue connected as %1$s</string>
+    <string name="webqueue_status_failed">Not connected: %1$s</string>
+    <string name="webqueue_status_disconnected">Web queue not connected</string>
+    <string name="webqueue_btn_disconnect">DISCONNECT</string>
+    <string name="webqueue_code">Link code</string>
+    <string name="webqueue_about">Channel-Z runs its queue through a separate web queue. Linking this TV lets the TV guide and Up Next show what is coming up on Channel-Z, with artwork. The link stays until you unlink it here or revoke it on the site.</string>
+    <string name="webqueue_status_linking">Linking device…</string>
+    <string name="webqueue_linked_as">Linked as device “%1$s” · press OK to unlink</string>
+    <string name="webqueue_link_hint">Not linked — enter a code from the queue site below</string>
+    <string name="webqueue_link_title">Link this TV</string>
+    <string name="webqueue_link_steps">On a phone or computer, log in to the Channel-Z queue site, open “Link a Device”, name it (e.g. Living room TV) and you will get a 5-character code. Enter it here within 10 minutes.</string>
+    <string name="webqueue_btn_link">Link</string>
 </resources>
