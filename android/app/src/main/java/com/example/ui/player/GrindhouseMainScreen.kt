@@ -274,30 +274,6 @@ fun GrindhouseMainScreen(
                             onRetryClick = { viewModel.retryConnection() }
                         )
 
-                        // Remote Hints Pill — nur auf TV. Auf dem Handy gibt es kein D-Pad,
-                        // die Fernbedienungs-Symbole sind dort sinnlos und druecken in der
-                        // schmalen Hochkant-Leiste Status-Dot und Pill uebereinander (Frieds
-                        // "komisch im Hochkant").
-                        if (isTv) {
-                            Surface(
-                                color = Color.Black.copy(alpha = 0.55f),
-                                shape = RoundedCornerShape(12.dp),
-                                border = androidx.compose.foundation.BorderStroke(1.dp, SubtleBorder)
-                            ) {
-                                Row(
-                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                ) {
-                                    RemoteKeySquare("▲", stringResource(R.string.remote_hint_up).substringAfter(" "))
-                                    RemoteKeySquare("▼", stringResource(R.string.remote_hint_down).substringAfter(" "))
-                                    RemoteKeySquare("◄", stringResource(R.string.remote_hint_left).substringAfter(" "))
-                                    RemoteKeySquare("►", stringResource(R.string.remote_hint_right).substringAfter(" "))
-                                    RemoteKeySquare("OK", stringResource(R.string.remote_hint_center).substringAfter(" "))
-                                    RemoteKeySquare("≡", stringResource(R.string.remote_hint_menu).substringAfter(" "))
-                                }
-                            }
-                        }
                     }
                 }
 
@@ -306,6 +282,7 @@ fun GrindhouseMainScreen(
                     nowPlaying = metadataOverlayState.nowPlaying,
                     upNext = metadataOverlayState.upNext,
                     queueItems = metadataOverlayState.queueItems,
+                    use24HourClock = settings.use24HourClock,
                     isVisible = isMetadataVisible && !isUpNextVisible,
                     isRedditFallback = metadataOverlayState.isRedditFallback,
                     connectionStatus = connectionStatus,
@@ -319,6 +296,7 @@ fun GrindhouseMainScreen(
                 UpNextOverlay(
                     isVisible = isUpNextVisible,
                     queueItems = metadataOverlayState.queueItems,
+                    use24HourClock = settings.use24HourClock,
                     redditScheduleTitle = metadataOverlayState.redditScheduleTitle,
                     redditScheduleText = metadataOverlayState.redditScheduleText,
                     isRedditFallback = metadataOverlayState.isRedditFallback,
@@ -628,6 +606,7 @@ fun GrindhouseMainScreen(
                     onToggleChat = { viewModel.toggleChat() },
                     onUpdateChatMaxLines = { viewModel.updateChatMaxLines(it) },
                     onToggleSubtitles = { viewModel.toggleSubtitles() },
+                    onToggleClockFormat = { viewModel.toggleClockFormat() },
                     onUpdateChatAutoHide = { viewModel.updateChatAutoHide(it) },
                     onUpdateChatTheme = { viewModel.updateChatTheme(it) },
                     onUpdateAppTheme = { viewModel.updateAppTheme(it) },

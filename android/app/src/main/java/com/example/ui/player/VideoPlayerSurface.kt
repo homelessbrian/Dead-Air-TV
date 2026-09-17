@@ -31,6 +31,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.AspectRatioFrameLayout
@@ -124,6 +127,40 @@ fun VideoPlayerSurface(
                         """.trimIndent(),
                         null
                     )
+                }
+
+                // Bug fix: pressing HOME on a TV left the YouTube WebView playing audio behind
+                // the launcher. Suspend the WebView (and its JS timers) whenever the activity
+                // is stopped, and wake it again when we come back. ON_STOP does not fire for
+                // phone Picture-in-Picture, so PiP keeps playing as before.
+                val lifecycleOwner = LocalLifecycleOwner.current
+                DisposableEffect(lifecycleOwner, webViewRef.value) {
+                    val observer = LifecycleEventObserver { _, event ->
+                        val webView = webViewRef.value ?: return@LifecycleEventObserver
+                        when (event) {
+                            Lifecycle.Event.ON_STOP -> {
+                                webView.evaluateJavascript(
+                                    "try { var f = document.getElementById('player_iframe'); if (f && f.contentWindow) f.contentWindow.postMessage(JSON.stringify({'event':'command','func':'pauseVideo','args':[]}), '*'); } catch(e) {}",
+                                    null
+                                )
+                                webView.onPause()
+                                webView.pauseTimers()
+                            }
+                            Lifecycle.Event.ON_START -> {
+                                webView.resumeTimers()
+                                webView.onResume()
+                                if (isPlaying) {
+                                    webView.evaluateJavascript(
+                                        "try { var f = document.getElementById('player_iframe'); if (f && f.contentWindow) f.contentWindow.postMessage(JSON.stringify({'event':'command','func':'playVideo','args':[]}), '*'); } catch(e) {}",
+                                        null
+                                    )
+                                }
+                            }
+                            else -> Unit
+                        }
+                    }
+                    lifecycleOwner.lifecycle.addObserver(observer)
+                    onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
                 }
 
                 // CyTube Server mediaUpdate: Zeit-Drift & Play/Pause mit YouTube-Iframe synchronisieren

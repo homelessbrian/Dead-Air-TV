@@ -18,6 +18,7 @@ class SettingsRepository(context: Context) {
     private fun loadSettings(): AppSettings {
         return AppSettings(
             chatEnabled = prefs.getBoolean("chat_enabled", true),
+            use24HourClock = prefs.getBoolean("use_24h_clock", false),
             chatMaxLines = prefs.getInt("chat_max_lines", 3).coerceIn(1, 3),
             chatBackgroundOpacity = prefs.getFloat("chat_opacity", 0.15f),
             chatFontSizeSp = prefs.getInt("chat_font_size", 16),
@@ -40,6 +41,7 @@ class SettingsRepository(context: Context) {
         val newSettings = update(_settings.value)
         prefs.edit()
             .putBoolean("chat_enabled", newSettings.chatEnabled)
+            .putBoolean("use_24h_clock", newSettings.use24HourClock)
             .putInt("chat_max_lines", newSettings.chatMaxLines)
             .putFloat("chat_opacity", newSettings.chatBackgroundOpacity)
             .putInt("chat_font_size", newSettings.chatFontSizeSp)

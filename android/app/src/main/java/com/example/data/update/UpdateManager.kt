@@ -1,6 +1,7 @@
 package com.example.data.update
 
 import android.content.Context
+import com.example.BuildConfig
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
@@ -33,7 +34,7 @@ class UpdateManager(private val context: Context) {
      * hosts the channel-z-tv repository. The release workflow keeps version.json current.
      */
     private val versionEndpoints = listOf(
-        "https://raw.githubusercontent.com/homelessbrian/channel-z-tv/main/version.json"
+        "https://raw.githubusercontent.com/${BuildConfig.UPDATE_REPO}/main/version.json"
     )
 
     /**

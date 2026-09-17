@@ -183,4 +183,7 @@
     <string name="nav_status_live">LIVE</string>
     <string name="nav_status_offline">OFFLINE</string>
     <string name="nav_footer_hint">▲▼ WÄHLEN · OK ÖFFNEN · ► SCHLIESSEN</string>
+    <string name="settings_clock_format">Uhrzeitformat</string>
+    <string name="settings_clock_12h">12 Stunden (9:30 PM) in Sendeplan und Info</string>
+    <string name="settings_clock_24h">24 Stunden (21:30) in Sendeplan und Info</string>
 </resources>

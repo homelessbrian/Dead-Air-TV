@@ -173,7 +173,11 @@ class MainActivity : ComponentActivity() {
                     return true
                 }
                 KeyEvent.KEYCODE_DPAD_DOWN -> {
-                    viewModel.toggleChat()
+                    if (viewModel.isMetadataVisible.value) {
+                        viewModel.hideMetadataOverlay()
+                    } else {
+                        viewModel.toggleChat()
+                    }
                     return true
                 }
                 KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER,

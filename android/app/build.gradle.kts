@@ -17,8 +17,17 @@ android {
     applicationId = "tv.channelz.cytube"
     minSdk = 24
     targetSdk = 36
-    versionCode = 1
-    versionName = "1.0.0"
+    // Set by the GitHub Actions workflow from the git tag (v1.2.3 -> 1.2.3 / 10203).
+    // Local builds fall back to the values below.
+    versionCode = System.getenv("APP_VERSION_CODE")?.toIntOrNull() ?: 1
+    versionName = System.getenv("APP_VERSION_NAME") ?: "1.0.0"
+
+    // GitHub repo ("owner/name") that hosts version.json and releases for the in-app updater.
+    // GITHUB_REPOSITORY is provided automatically inside GitHub Actions.
+    buildConfigField(
+      "String", "UPDATE_REPO",
+      "\"${System.getenv("GITHUB_REPOSITORY") ?: "YOUR_GITHUB_USERNAME/channel-z-tv"}\""
+    )
 
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
   }

@@ -71,11 +71,13 @@ To build locally: open `android/` in Android Studio, pick the `light` or `full` 
 
 ### Releasing a new version
 
-1. Bump `versionCode` and `versionName` in `android/app/build.gradle.kts`
-2. Update `version.json` in the repo root (version, versionCode, download URLs, notes)
-3. Push, then create the matching `vX.Y.Z` tag/release
+Create a tag — that's it. On GitHub: **Releases → Draft a new release → Choose a tag → type `v1.0.1` → Create new tag → Publish release**. The workflow then:
 
-The in-app updater reads `version.json` from this repo. If you fork it, replace `YOUR_GITHUB_USERNAME` in `version.json` and in `android/app/src/main/java/com/example/data/update/UpdateManager.kt`.
+1. builds both APKs with the version taken from the tag (`v1.0.1` → version name `1.0.1`, version code `10001`)
+2. attaches them to the release
+3. rewrites `version.json` on `main` so installed apps see the update on next launch
+
+Nothing to edit by hand: the version lives only in the tag, and the updater's download URLs are generated from this repository's name automatically.
 
 ## Project layout
 

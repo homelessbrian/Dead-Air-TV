@@ -13,6 +13,7 @@ data class QueueScheduleItem(
     val title: String,
     val durationSeconds: Int = 0,
     val startTimeFormatted: String = "",
+    val startTimeMillis: Long = 0L,
     val durationFormatted: String = "",
     val mediaId: String = ""
 )
@@ -139,6 +140,7 @@ enum class ConnectionStatus {
 
 data class AppSettings(
     val chatEnabled: Boolean = true,
+    val use24HourClock: Boolean = false,
     val chatMaxLines: Int = 3,
     val chatBackgroundOpacity: Float = 0.15f,
     val chatFontSizeSp: Int = 16,

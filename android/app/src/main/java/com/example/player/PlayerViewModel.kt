@@ -463,6 +463,10 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         settingsRepo.updateSettings { it.copy(chatMaxLines = lines.coerceIn(1, 3)) }
     }
 
+    fun toggleClockFormat() {
+        settingsRepo.updateSettings { it.copy(use24HourClock = !it.use24HourClock) }
+    }
+
     fun toggleSubtitles() {
         settingsRepo.toggleSubtitles()
     }
@@ -660,6 +664,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
                     title = item.title,
                     durationSeconds = durationSec,
                     startTimeFormatted = startFormatted,
+                    startTimeMillis = startMs,
                     durationFormatted = durFormatted,
                     mediaId = item.id
                 )

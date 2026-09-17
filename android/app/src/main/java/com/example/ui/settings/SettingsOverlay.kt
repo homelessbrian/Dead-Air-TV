@@ -44,6 +44,7 @@ import androidx.compose.material.icons.filled.Opacity
 import androidx.compose.material.icons.filled.BugReport
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Palette
+import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.PlayCircleOutline
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Settings
@@ -123,6 +124,7 @@ fun SettingsOverlay(
     onToggleChat: () -> Unit,
     onUpdateChatMaxLines: (Int) -> Unit = {},
     onToggleSubtitles: () -> Unit = {},
+    onToggleClockFormat: () -> Unit = {},
     onUpdateChatAutoHide: (Int) -> Unit = {},
     onUpdateChatTheme: (String) -> Unit = {},
     onUpdateAppTheme: (String) -> Unit = {},
@@ -472,6 +474,30 @@ fun SettingsOverlay(
 
                             item {
                                 FocusableSettingsItem(
+                                    title = stringResource(R.string.settings_clock_format),
+                                    subtitle = if (settings.use24HourClock)
+                                        stringResource(R.string.settings_clock_24h)
+                                    else stringResource(R.string.settings_clock_12h),
+                                    icon = Icons.Default.Schedule,
+                                    onClick = onToggleClockFormat
+                                ) {
+                                    Surface(
+                                        color = AccentPurple,
+                                        shape = RoundedCornerShape(8.dp)
+                                    ) {
+                                        Text(
+                                            text = if (settings.use24HourClock) "24H" else "12H",
+                                            color = PureWhite,
+                                            fontSize = 12.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                                        )
+                                    }
+                                }
+                            }
+
+                            item {
+                                FocusableSettingsItem(
                                     title = stringResource(R.string.settings_theme),
                                     subtitle = stringResource(themeNameRes(settings.appTheme)),
                                     icon = Icons.Default.Palette,
@@ -633,32 +659,6 @@ fun SettingsOverlay(
                                         fontSize = 20.sp,
                                         modifier = Modifier.padding(horizontal = 10.dp)
                                     )
-                                }
-                            }
-
-                            // 6. Test Demo Stream
-                            item {
-                                FocusableSettingsItem(
-                                    title = stringResource(R.string.demo_stream_title),
-                                    subtitle = stringResource(R.string.demo_stream_desc),
-                                    icon = Icons.Default.PlayCircleOutline,
-                                    onClick = {
-                                        onPlayDemoStream()
-                                        onClose()
-                                    }
-                                ) {
-                                    Surface(
-                                        color = AccentPurple,
-                                        shape = RoundedCornerShape(8.dp)
-                                    ) {
-                                        Text(
-                                            text = stringResource(R.string.action_play),
-                                            color = PureWhite,
-                                            fontWeight = FontWeight.Bold,
-                                            fontSize = 12.sp,
-                                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 5.dp)
-                                        )
-                                    }
                                 }
                             }
 

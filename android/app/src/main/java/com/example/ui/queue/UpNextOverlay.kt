@@ -60,6 +60,7 @@ import com.example.ui.theme.SurfaceDark
 import com.example.ui.theme.TextMuted
 import com.example.ui.theme.TextSubtitleWhite
 import com.example.ui.theme.SurfaceCard
+import com.example.ui.components.formatClock
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -67,6 +68,7 @@ import kotlinx.coroutines.launch
 fun UpNextOverlay(
     isVisible: Boolean,
     queueItems: List<QueueScheduleItem>,
+    use24HourClock: Boolean = false,
     redditScheduleTitle: String? = null,
     redditScheduleText: String? = null,
     isRedditFallback: Boolean = false,
@@ -300,7 +302,7 @@ fun UpNextOverlay(
                                 ) {
                                     // Start Time
                                     Text(
-                                        text = item.startTimeFormatted,
+                                        text = if (item.startTimeMillis > 0L) formatClock(item.startTimeMillis, use24HourClock) else item.startTimeFormatted,
                                         style = TextStyle(
                                             color = AccentLavender,
                                             fontWeight = FontWeight.Medium,

@@ -62,6 +62,7 @@ import com.example.ui.theme.SubtleBorder
 import com.example.ui.theme.TextMuted
 import com.example.ui.theme.TextSubtitleWhite
 import java.util.Locale
+import com.example.ui.components.formatClock
 import com.example.ui.theme.SurfaceCard
 import com.example.ui.theme.SurfaceDark
 
@@ -70,6 +71,7 @@ fun MetadataOverlay(
     nowPlaying: MediaItem?,
     upNext: List<MediaItem>,
     queueItems: List<QueueScheduleItem> = emptyList(),
+    use24HourClock: Boolean = false,
     isVisible: Boolean,
     isRedditFallback: Boolean = false,
     connectionStatus: ConnectionStatus = ConnectionStatus.LIVE,
@@ -227,7 +229,7 @@ fun MetadataOverlay(
                                 title = it.title,
                                 duration = it.durationFormatted.takeIf { d -> d.isNotBlank() }
                                     ?: formatDuration(it.durationSeconds),
-                                startTime = it.startTimeFormatted
+                                startTime = if (it.startTimeMillis > 0L) formatClock(it.startTimeMillis, use24HourClock) else it.startTimeFormatted
                             )
                         }
                     } else {

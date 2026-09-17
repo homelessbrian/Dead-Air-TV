@@ -192,6 +192,7 @@ class DataScraper(
                         title = title,
                         durationSeconds = seconds,
                         startTimeFormatted = startTimeStr,
+                        startTimeMillis = estStartTimeMs,
                         durationFormatted = durationStr,
                         mediaId = id
                     )
@@ -312,6 +313,7 @@ class DataScraper(
                         title = cleanTitle,
                         durationSeconds = durationSec,
                         startTimeFormatted = startTimeStr,
+                        startTimeMillis = accumulatedMs,
                         durationFormatted = "90m",
                         mediaId = "reddit_$i"
                     )
@@ -391,6 +393,7 @@ class DataScraper(
                         title = cleanTitle,
                         durationSeconds = durationSec,
                         startTimeFormatted = startTimeStr,
+                        startTimeMillis = accumulatedMs,
                         durationFormatted = "90m",
                         mediaId = "reddit_rss_$idx"
                     )

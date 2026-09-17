@@ -182,4 +182,7 @@
     <string name="nav_status_live">LIVE</string>
     <string name="nav_status_offline">OFFLINE</string>
     <string name="nav_footer_hint">▲▼ MOVE · OK SELECT · ► CLOSE</string>
+    <string name="settings_clock_format">Clock Format</string>
+    <string name="settings_clock_12h">12-hour (9:30 PM) in Up Next and Info</string>
+    <string name="settings_clock_24h">24-hour (21:30) in Up Next and Info</string>
 </resources>
