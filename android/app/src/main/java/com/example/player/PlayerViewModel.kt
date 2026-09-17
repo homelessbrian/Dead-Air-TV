@@ -114,14 +114,13 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     val users: StateFlow<List<ChannelUser>> = socketClient.users
     val emotes: StateFlow<List<ChannelEmote>> = socketClient.emotes
     val loginState: StateFlow<LoginState> = socketClient.loginState
+    val dataScraper = DataScraper(viewModelScope)
+    private val movieInfoRepo = MovieInfoRepository()
     val queueScheduleItems: StateFlow<List<QueueScheduleItem>> = dataScraper.queueScheduleItems
     val mediaSyncEvent: SharedFlow<MediaSyncUpdate> = socketClient.mediaSyncEvent
 
     /** One row per known channel; the active one is fed by the player socket, the rest by scouts. */
     @OptIn(ExperimentalCoroutinesApi::class)
-    val dataScraper = DataScraper(viewModelScope)
-    private val movieInfoRepo = MovieInfoRepository()
-
     val guideChannels: StateFlow<List<GuideChannel>> = settings
         .map { it.roomName }
         .distinctUntilChanged()
