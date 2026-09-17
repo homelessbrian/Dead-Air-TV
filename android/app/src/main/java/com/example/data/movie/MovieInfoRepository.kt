@@ -96,7 +96,14 @@ class MovieInfoRepository(
         // Suchtreffern gar nicht auf — nur Fabelwesen, Videospiele und ein Stummfilm von 1913.
         // IMDb findet die Serie und nennt dabei die Art des Werks, womit sich Podcasts,
         // Kurzfilme und Videospiele sauber aussortieren lassen.
-        val base = fromWikidata ?: (
+        val fromWikipedia = fromWikidata ?: try {
+            resolveViaWikipedia(parsed)
+        } catch (e: Exception) {
+            Log.w(TAG, "Wikipedia-Suche fehlgeschlagen fuer '${parsed.title}': ${e.message}")
+            null
+        }
+
+        val base = fromWikipedia ?: (
             if (useImdb) {
                 try {
                     resolveViaImdbSearch(parsed)
@@ -153,8 +160,21 @@ class MovieInfoRepository(
         val year: Int?,
         val isEpisode: Boolean,
         val season: Int? = null,
-        val episode: Int? = null
-    )
+        val episode: Int? = null,
+        /** Other names the same work goes by, e.g. the part after "aka". */
+        val alternates: List<String> = emptyList()
+    ) {
+        /** Every name worth searching, most likely first. */
+        fun variants(): List<String> {
+            val out = mutableListOf(title)
+            out += alternates
+            // "Title with Host" / "Title: Subtitle" / "Title - Extra" — try the bare title too.
+            out += title.replace(Regex("""\s+with\s+.*$""", RegexOption.IGNORE_CASE), "")
+            out += title.substringBefore(":")
+            out += title.substringBefore(" - ")
+            return out.map { it.trim(' ', '-', '–', '—', ',', ':') }.filter { it.length >= 2 }.distinct()
+        }
+    }
 
     /**
      * Schaelt aus einem rohen Titel den Werktitel heraus — bei Serien den Namen der Serie.
@@ -193,7 +213,22 @@ class MovieInfoRepository(
 
         val yearMatch = Regex("""[\[(]?\b((?:19|20)\d{2})\b[\])]?""").find(s)
         val year = yearMatch?.groupValues?.get(1)?.toIntOrNull()
-        if (yearMatch != null) s = s.replaceRange(yearMatch.range, " ")
+        if (yearMatch != null) {
+            // Whatever follows the year in a filename is almost always release junk, an "aka",
+            // or a group tag — keep it only as an alternate, never in the main title.
+            val before = s.substring(0, yearMatch.range.first).trim()
+            val after = s.substring(yearMatch.range.last + 1).trim()
+            s = if (before.length >= 2) before + " " + akaPart(after) else before + " " + after
+        }
+
+        // "Title aka Other Title" / "Title a.k.a. Other Title"
+        val alternates = mutableListOf<String>()
+        val akaSplit = Regex("""\s+(?:aka|a\.k\.a\.?)\s+""", RegexOption.IGNORE_CASE).split(s, limit = 2)
+        if (akaSplit.size == 2) {
+            s = akaSplit[0]
+            alternates += akaSplit[1].replace(Regex("""[._]+"""), " ").replace(Regex("""[\[\]()]"""), " ")
+                .replace(Regex("""\s{2,}"""), " ").trim(' ', '-', '–', '—', ',')
+        }
 
         // Folgenkennzeichnung in allen Schreibweisen, die im Kanal vorkommen. Die Zahlenpaare
         // sagen, in welcher Fanggruppe Staffel und Folge stehen (0 = nicht angegeben).
@@ -228,7 +263,13 @@ class MovieInfoRepository(
             .replace(Regex("""\s{2,}"""), " ")
             .trim(' ', '-', '–', '—', ',', '|')
 
-        return ParsedTitle(s, year, cutAt != null, season, episodeNo)
+        return ParsedTitle(s, year, cutAt != null, season, episodeNo, alternates)
+    }
+
+    /** From the text after a year, keep only an "aka …" alternate (as the aka marker + name). */
+    private fun akaPart(after: String): String {
+        val m = Regex("""(?:aka|a\.k\.a\.?)\s+(.+)$""", RegexOption.IGNORE_CASE).find(after) ?: return ""
+        return " aka " + m.groupValues[1]
     }
 
     // ------------------------------------------------------------ Wikidata
@@ -240,13 +281,7 @@ class MovieInfoRepository(
         // Erster Versuch mit dem gefundenen Namen; bringt der nichts, wird ein Zusatz wie
         // "… with Robert Stack" abgeschnitten. Solche Beisaetze stehen oft im YouTube-Titel,
         // aber nicht im Datenbankeintrag.
-        val attempts = buildList {
-            add(parsed.title)
-            val withoutHost = parsed.title.replace(Regex("""\s+with\s+.*${'$'}""", RegexOption.IGNORE_CASE), "").trim()
-            if (withoutHost.length in 3 until parsed.title.length) add(withoutHost)
-        }
-
-        for (attempt in attempts) {
+        for (attempt in parsed.variants()) {
             val ranked = wikidataSearch(attempt)
                 .map { it to scoreCandidate(it, parsed) }
                 .filter { it.second > Int.MIN_VALUE }
@@ -327,6 +362,35 @@ class MovieInfoRepository(
             genres = genreIds.mapNotNull { labels[it] },
             imdbId = imdbId
         )
+    }
+
+    /**
+     * Wikipedia's full-text search is forgiving about case, punctuation and word order where
+     * Wikidata's label search is not. Each hit carries its Wikidata id, so the rest of the
+     * pipeline (film check, year check, IMDb id) stays the same.
+     */
+    private fun resolveViaWikipedia(parsed: ParsedTitle): MovieInfo? {
+        val kind = if (parsed.isEpisode) "television series" else "film"
+        for (variant in parsed.variants().take(3)) {
+            val query = listOfNotNull(variant, parsed.year?.toString(), kind).joinToString(" ")
+            val url = "https://en.wikipedia.org/w/api.php?action=query&generator=search&gsrlimit=4" +
+                "&gsrsearch=${query.urlEncoded()}&prop=pageprops&ppprop=wikibase_item&format=json"
+            val body = httpGet(url) ?: continue
+            val pages = JSONObject(body).optJSONObject("query")?.optJSONObject("pages") ?: continue
+            val candidates = pages.keys().asSequence()
+                .mapNotNull { pages.optJSONObject(it) }
+                .sortedBy { it.optInt("index", 99) }
+                .mapNotNull { page ->
+                    val qid = page.optJSONObject("pageprops")?.optString("wikibase_item").orEmpty()
+                    if (qid.startsWith("Q")) Candidate(qid, page.optString("title"), "") else null
+                }
+                .toList()
+            for (candidate in candidates) {
+                val info = loadEntity(candidate, parsed)
+                if (info != null) return info
+            }
+        }
+        return null
     }
 
     private fun wikidataSearch(title: String): List<Candidate> {
@@ -434,8 +498,9 @@ class MovieInfoRepository(
      * Trivia) laeuft danach wie gewohnt ueber die IMDb-Kennung.
      */
     private fun resolveViaImdbSearch(parsed: ParsedTitle): MovieInfo? {
-        val hits = imdbSearch(parsed.title)
-        val best = bestImdbHit(hits, parsed) ?: return null
+        val best = parsed.variants().firstNotNullOfOrNull { variant ->
+            bestImdbHit(imdbSearch(variant), parsed)
+        } ?: return null
 
         return MovieInfo(
             query = parsed.title,

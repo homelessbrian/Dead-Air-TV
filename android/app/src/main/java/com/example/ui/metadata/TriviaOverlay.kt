@@ -249,7 +249,7 @@ private fun MovieDetails(info: MovieInfo) {
                 contentDescription = info.title,
                 modifier = Modifier
                     .size(width = posterW, height = posterH)
-                    .clip(RoundedCornerShape(10.dp))
+                    .clip(RoundedCornerShape(5.dp))
             )
         }
         if (narrow) {

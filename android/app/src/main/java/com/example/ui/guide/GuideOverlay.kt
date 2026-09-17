@@ -236,7 +236,7 @@ fun GuideOverlay(
                                 modifier = Modifier
                                     .width(if (isTv) 64.dp else 52.dp)
                                     .fillMaxHeight()
-                                    .clip(RoundedCornerShape(8.dp))
+                                    .clip(RoundedCornerShape(4.dp))
                             )
                             Spacer(Modifier.width(14.dp))
                             Column(modifier = Modifier.weight(1f)) {

@@ -808,8 +808,9 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
                 true
             }
             _isNavRailOpen.value -> {
+                // Second BACK: close the menu and let the Activity show the exit hint.
                 closeNavRail()
-                true
+                false
             }
             _isTriviaVisible.value -> {
                 hideTrivia()
@@ -832,8 +833,14 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
                 true
             }
             else -> {
-                // Not handled here: the Activity decides between "show hint" and "exit".
-                false
+                // First BACK on the bare player opens the menu. If the exit hint is showing
+                // (i.e. this is the third BACK), fall through so the Activity exits.
+                if (_showExitHint.value) {
+                    false
+                } else {
+                    openNavRail()
+                    true
+                }
             }
         }
     }

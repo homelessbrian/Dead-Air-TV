@@ -129,9 +129,9 @@ fun MetadataOverlay(
                         Box(
                             modifier = Modifier
                                 .size(width = 46.dp, height = 66.dp)
-                                .clip(RoundedCornerShape(12.dp))
+                                .clip(RoundedCornerShape(6.dp))
                                 .background(SurfaceCard)
-                                .border(1.dp, AccentPurple.copy(alpha = 0.5f), RoundedCornerShape(12.dp)),
+                                .border(1.dp, AccentPurple.copy(alpha = 0.5f), RoundedCornerShape(6.dp)),
                             contentAlignment = Alignment.Center
                         ) {
                             MoviePoster(
