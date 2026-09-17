@@ -1,11 +1,11 @@
 {
-  "version": "1.1.1",
-  "versionCode": 10101,
+  "version": "1.1.2",
+  "versionCode": 10102,
   "apk": "dead-air-full.apk",
   "lightApk": "dead-air-light.apk",
-  "url": "https://github.com/homelessbrian/channel-z-tv/releases/download/v1.1.1/dead-air-full.apk",
-  "lightUrl": "https://github.com/homelessbrian/channel-z-tv/releases/download/v1.1.1/dead-air-light.apk",
-  "notes": "Dead Air v1.1.1 — see https://github.com/homelessbrian/channel-z-tv/releases/tag/v1.1.1",
+  "url": "https://github.com/homelessbrian/channel-z-tv/releases/download/v1.1.2/dead-air-full.apk",
+  "lightUrl": "https://github.com/homelessbrian/channel-z-tv/releases/download/v1.1.2/dead-air-light.apk",
+  "notes": "Dead Air v1.1.2 — see https://github.com/homelessbrian/channel-z-tv/releases/tag/v1.1.2",
   "minAndroid": 7,
   "publishedAt": "2026-09-17"
 }
