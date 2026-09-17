@@ -26,15 +26,17 @@ jobs:
           KEEP=".github android .gitignore LICENSE NOTICE.md README.md version.json"
 
           DELETE=()
+          is_kept() {
+            for k in $KEEP; do [ "$1" = "$k" ] && return 0; done
+            return 1
+          }
 
-          # 1. Anything at the root that isn't on the keep list
-          for entry in $(ls -A); do
-            case " $KEEP " in
-              *" $entry "*) ;;                 # keep
-              .git) ;;                         # never touch
-              *) DELETE+=("$entry") ;;
-            esac
-          done
+          # 1. Anything at the root that isn't on the keep list (never .git)
+          while IFS= read -r -d '' entry; do
+            name="${entry#./}"
+            [ "$name" = ".git" ] && continue
+            is_kept "$name" || DELETE+=("$name")
+          done < <(find . -mindepth 1 -maxdepth 1 -print0)
 
           # 2. Build output or caches that should never be committed
           for stray in android/build android/app/build android/.gradle android/.idea android/local.properties; do
@@ -42,7 +44,7 @@ jobs:
           done
 
           # 3. Zips, OS junk, and the one-time unpack workflow
-          while IFS= read -r f; do DELETE+=("$f"); done < <(find . -path ./.git -prune -o \( -name '*.zip' -o -name '.DS_Store' -o -name 'Thumbs.db' \) -print)
+          while IFS= read -r -d '' f; do DELETE+=("${f#./}"); done < <(find . -path ./.git -prune -o \( -name '*.zip' -o -name '.DS_Store' -o -name 'Thumbs.db' \) -print0)
           [ -f .github/workflows/unpack.yml ] && DELETE+=(".github/workflows/unpack.yml")
 
           if [ ${#DELETE[@]} -eq 0 ]; then
@@ -54,12 +56,11 @@ jobs:
           printf '  %s\n' "${DELETE[@]}"
 
           if [ "$DRY_RUN" = "true" ]; then
-            echo "Dry run — no changes made. Re-run with dry_run unchecked to delete."
+            echo "Dry run - no changes made. Re-run with dry_run unchecked to delete."
             exit 0
           fi
 
-          git rm -r -q --cached "${DELETE[@]}" 2>/dev/null || true
-          rm -rf "${DELETE[@]}"
+          rm -rf -- "${DELETE[@]}"
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
           git add -A
