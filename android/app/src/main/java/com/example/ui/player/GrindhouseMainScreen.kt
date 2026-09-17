@@ -119,6 +119,8 @@ fun GrindhouseMainScreen(
     val guideRow by viewModel.guideRow.collectAsStateWithLifecycle()
     val guideCol by viewModel.guideCol.collectAsStateWithLifecycle()
     val guideChannels by viewModel.guideChannels.collectAsStateWithLifecycle()
+    val guideScrolledBack by viewModel.guideScrolledBack.collectAsStateWithLifecycle()
+    val guideMovieInfo by viewModel.guideMovieInfo.collectAsStateWithLifecycle()
     val settingsPage by viewModel.settingsPage.collectAsStateWithLifecycle()
     val movieInfo by viewModel.movieInfo.collectAsStateWithLifecycle()
     val isTriviaVisible by viewModel.isTriviaVisible.collectAsStateWithLifecycle()
@@ -598,6 +600,8 @@ fun GrindhouseMainScreen(
                     channels = guideChannels,
                     focusRow = guideRow,
                     focusCol = guideCol,
+                    scrolledBack = guideScrolledBack,
+                    movieInfo = guideMovieInfo,
                     use24HourClock = settings.use24HourClock,
                     isTv = isTv,
                     onProgramClick = { r, c -> viewModel.guideSelect(r, c) },

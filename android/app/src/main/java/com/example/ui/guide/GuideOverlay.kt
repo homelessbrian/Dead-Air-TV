@@ -45,6 +45,9 @@ import com.example.R
 import com.example.data.guide.GuideChannel
 import com.example.data.guide.GuideProgram
 import com.example.data.model.ConnectionStatus
+import com.example.data.model.MovieInfo
+import coil.compose.AsyncImage
+import androidx.compose.ui.layout.ContentScale
 import com.example.ui.components.formatClock
 import com.example.ui.theme.AccentIceBlue
 import com.example.ui.theme.AccentLavender
@@ -70,6 +73,8 @@ fun GuideOverlay(
     channels: List<GuideChannel>,
     focusRow: Int,
     focusCol: Int,
+    scrolledBack: Boolean = false,
+    movieInfo: MovieInfo? = null,
     use24HourClock: Boolean,
     isTv: Boolean,
     onProgramClick: (row: Int, col: Int) -> Unit = { _, _ -> },
@@ -88,17 +93,22 @@ fun GuideOverlay(
         val focusedChannel = channels.getOrNull(focusRow)
         val focusedProgram = focusedChannel?.programs?.getOrNull(focusCol)
 
-        // Visible window start, snapped to the half hour; follows the focused programme.
-        var windowStartMs by remember { mutableLongStateOf(floorToSlot(nowMs)) }
-        LaunchedEffect(focusedProgram?.startMs, nowMs) {
+        // Visible window start, snapped to the half hour. Anchored at "now" (the red line);
+        // it only moves forward to follow a focused future programme, and only moves back
+        // when the user explicitly presses LEFT on the current block.
+        val nowSlot = floorToSlot(nowMs)
+        var windowStartMs by remember { mutableLongStateOf(nowSlot) }
+        LaunchedEffect(focusedProgram?.startMs, focusedProgram?.isCurrent, scrolledBack, nowSlot) {
             val p = focusedProgram
-            val windowEnd = windowStartMs + WINDOW_MINUTES * MS_PER_MIN
-            when {
-                p == null -> windowStartMs = floorToSlot(nowMs)
-                p.startMs < windowStartMs -> windowStartMs = floorToSlot(maxOf(p.startMs, nowMs - 60 * MS_PER_MIN))
-                p.startMs > windowEnd - 20 * MS_PER_MIN -> windowStartMs = floorToSlot(p.startMs - SLOT_MINUTES * MS_PER_MIN)
+            val windowLen = WINDOW_MINUTES * MS_PER_MIN
+            windowStartMs = when {
+                p == null -> nowSlot
+                scrolledBack && p.isCurrent -> floorToSlot(p.startMs)
+                p.isCurrent -> nowSlot
+                p.startMs >= windowStartMs + windowLen - 20 * MS_PER_MIN -> floorToSlot(p.startMs - SLOT_MINUTES * MS_PER_MIN)
+                p.startMs < windowStartMs -> maxOf(nowSlot, floorToSlot(p.startMs))
+                else -> windowStartMs
             }
-            if (windowStartMs > floorToSlot(nowMs) && p != null && p.isCurrent) windowStartMs = floorToSlot(nowMs)
         }
 
         val pad = if (isTv) 48.dp else 16.dp
@@ -213,34 +223,72 @@ fun GuideOverlay(
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
+                        .height(if (isTv) 118.dp else 96.dp)
                         .clip(RoundedCornerShape(12.dp))
                         .background(SurfaceDark.copy(alpha = 0.9f))
-                        .padding(horizontal = 18.dp, vertical = 12.dp)
+                        .padding(horizontal = 16.dp, vertical = 12.dp)
                 ) {
                     if (focusedProgram != null && focusedChannel != null) {
-                        Column {
-                            Text(
-                                text = focusedProgram.title,
-                                color = PureWhite,
-                                fontSize = if (isTv) 18.sp else 15.sp,
-                                fontWeight = FontWeight.Bold,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                            Spacer(Modifier.height(4.dp))
-                            val range = formatClock(focusedProgram.startMs, use24HourClock) + " – " +
-                                formatClock(focusedProgram.endMs, use24HourClock)
-                            val dur = formatDurationMs(focusedProgram.durationMs)
-                            val hint = when {
-                                focusedChannel.isActive -> stringResource(R.string.guide_hint_active)
-                                else -> stringResource(R.string.guide_hint_switch, focusedChannel.label)
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            val poster = movieInfo?.posterUrl
+                            if (!poster.isNullOrBlank()) {
+                                AsyncImage(
+                                    model = poster,
+                                    contentDescription = null,
+                                    contentScale = ContentScale.Crop,
+                                    modifier = Modifier
+                                        .width(if (isTv) 64.dp else 52.dp)
+                                        .fillMaxHeight()
+                                        .clip(RoundedCornerShape(8.dp))
+                                )
+                                Spacer(Modifier.width(14.dp))
                             }
+                            Column(modifier = Modifier.weight(1f)) {
+                                val displayTitle = movieInfo?.title?.takeIf { it.isNotBlank() } ?: focusedProgram.title
+                                val year = movieInfo?.year?.let { "  ($it)" } ?: ""
+                                Text(
+                                    text = displayTitle + year,
+                                    color = PureWhite,
+                                    fontSize = if (isTv) 18.sp else 15.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                                Spacer(Modifier.height(3.dp))
+                                val range = formatClock(focusedProgram.startMs, use24HourClock) + " – " +
+                                    formatClock(focusedProgram.endMs, use24HourClock)
+                                val dur = formatDurationMs(focusedProgram.durationMs)
+                                val extras = listOfNotNull(
+                                    movieInfo?.genres?.take(2)?.joinToString(", ")?.takeIf { it.isNotBlank() },
+                                    movieInfo?.rating?.let { "★ %.1f".format(it) }
+                                ).joinToString("  ·  ")
+                                Text(
+                                    text = listOf(focusedChannel.label, range, dur, extras)
+                                        .filter { it.isNotBlank() }.joinToString("  ·  "),
+                                    color = AccentLavender,
+                                    fontSize = 13.sp,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                                val plot = movieInfo?.plot
+                                if (!plot.isNullOrBlank()) {
+                                    Spacer(Modifier.height(3.dp))
+                                    Text(
+                                        text = plot,
+                                        color = TextMuted,
+                                        fontSize = 12.sp,
+                                        maxLines = 2,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                }
+                            }
+                            Spacer(Modifier.width(14.dp))
                             Text(
-                                text = "${focusedChannel.label}  ·  $range  ·  $dur      $hint",
+                                text = if (focusedChannel.isActive) stringResource(R.string.guide_hint_active)
+                                else stringResource(R.string.guide_hint_switch, focusedChannel.label),
                                 color = TextMuted,
-                                fontSize = 13.sp,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
+                                fontSize = 12.sp,
+                                maxLines = 2
                             )
                         }
                     } else {

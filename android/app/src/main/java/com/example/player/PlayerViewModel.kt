@@ -68,6 +68,13 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     val guideRow: StateFlow<Int> = _guideRow.asStateFlow()
     private val _guideCol = MutableStateFlow(0)
     val guideCol: StateFlow<Int> = _guideCol.asStateFlow()
+    /** True after the user pressed LEFT on the currently-playing block: show its start time. */
+    private val _guideScrolledBack = MutableStateFlow(false)
+    val guideScrolledBack: StateFlow<Boolean> = _guideScrolledBack.asStateFlow()
+    private val _guideMovieInfo = MutableStateFlow<MovieInfo?>(null)
+    val guideMovieInfo: StateFlow<MovieInfo?> = _guideMovieInfo.asStateFlow()
+    private var guideInfoJob: Job? = null
+    private val guideInfoCache = mutableMapOf<String, MovieInfo?>()
     val dataScraper = DataScraper(viewModelScope)
     private val movieInfoRepo = MovieInfoRepository()
 
@@ -590,7 +597,9 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         val rows = guideChannels.value
         _guideRow.value = rows.indexOfFirst { it.isActive }.coerceAtLeast(0)
         _guideCol.value = 0
+        _guideScrolledBack.value = false
         _isGuideOpen.value = true
+        scheduleGuideInfoLookup()
     }
 
     fun closeGuide() {
@@ -603,8 +612,29 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         val row = (_guideRow.value + dRow).coerceIn(0, rows.size - 1)
         val programs = rows[row].programs
         val col = if (programs.isEmpty()) 0 else (_guideCol.value + dCol).coerceIn(0, programs.size - 1)
+        // LEFT while already on the first (current) block = "show me when it started".
+        _guideScrolledBack.value = dCol < 0 && _guideCol.value == 0 && col == 0 && dRow == 0
         _guideRow.value = row
         _guideCol.value = col
+        scheduleGuideInfoLookup()
+    }
+
+    private fun scheduleGuideInfoLookup() {
+        guideInfoJob?.cancel()
+        val program = guideChannels.value.getOrNull(_guideRow.value)?.programs?.getOrNull(_guideCol.value)
+        val title = program?.title ?: run { _guideMovieInfo.value = null; return }
+        if (guideInfoCache.containsKey(title)) {
+            _guideMovieInfo.value = guideInfoCache[title]
+            return
+        }
+        _guideMovieInfo.value = null
+        if (!settings.value.movieInfoEnabled) return
+        guideInfoJob = viewModelScope.launch {
+            delay(350L) // debounce while the user is still moving
+            val info = runCatching { movieInfoRepo.lookup(title, useImdb = settings.value.imdbEnabled) }.getOrNull()
+            guideInfoCache[title] = info
+            _guideMovieInfo.value = info
+        }
     }
 
     fun guideSelect(row: Int = _guideRow.value, col: Int = _guideCol.value) {
@@ -651,12 +681,6 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
             NavItem.DETAILS -> if (!_isTriviaVisible.value) toggleTrivia()
             NavItem.CHAT -> toggleChat()
             NavItem.GUIDE -> openGuide()
-            NavItem.CHANNEL -> {
-                switchToNextRoom()
-                // keep the menu open so the new channel name is visible
-                _isNavRailOpen.value = true
-                scheduleNavRailHide()
-            }
             NavItem.SETTINGS -> openSettings()
         }
     }
