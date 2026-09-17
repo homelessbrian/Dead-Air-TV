@@ -119,6 +119,9 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
 
     /** One row per known channel; the active one is fed by the player socket, the rest by scouts. */
     @OptIn(ExperimentalCoroutinesApi::class)
+    val dataScraper = DataScraper(viewModelScope)
+    private val movieInfoRepo = MovieInfoRepository()
+
     val guideChannels: StateFlow<List<GuideChannel>> = settings
         .map { it.roomName }
         .distinctUntilChanged()
@@ -158,8 +161,6 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     /** Formatted display name for a raw stream title, using prefetched metadata if present. */
     fun displayName(rawTitle: String): String =
         displayTitle(rawTitle, _metadataByTitle.value[rawTitle])
-    val dataScraper = DataScraper(viewModelScope)
-    private val movieInfoRepo = MovieInfoRepository()
 
 
     val metadataOverlayState: StateFlow<MetadataOverlayState> = combine(
@@ -747,54 +748,6 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         return info
     }
 
-    private fun cleanGuideTitle(raw: String): String =
-        raw.replace(Regex("\\[[^\\]]*]"), " ")              // [1080p], [Remastered]
-            .replace(Regex("\\((?!\\d{4}\\))[^)]*\\)"), " ")   // (Director's Cut) but keep (1985)
-            .replace(Regex("(?i)\\b(1080p|720p|480p|2160p|4k|x264|x265|h264|h265|bluray|web-?dl|hdtv|dvdrip|brrip|remux)\\b"), " ")
-            .replace(Regex("(?i)\\.(mp4|mkv|avi|mov|webm)$"), " ")
-            .replace('.', ' ').replace('_', ' ')
-            .replace(Regex("\\s+"), " ")
-            .trim()
-
-    private fun scheduleGuideInfoLookup() {
-        guideInfoJob?.cancel()
-        val program = guideChannels.value.getOrNull(_guideRow.value)?.programs?.getOrNull(_guideCol.value)
-            ?: run { _guideMovieInfo.value = null; return }
-        val title = program.title
-        if (guideInfoCache.containsKey(title)) {
-            _guideMovieInfo.value = guideInfoCache[title]
-            return
-        }
-        _guideMovieInfo.value = null
-        if (!settings.value.movieInfoEnabled) return
-        guideInfoJob = viewModelScope.launch {
-            delay(350L) // debounce while the user is still moving
-            val useImdb = settings.value.imdbEnabled
-            val tried = mutableListOf<String>()
-            var info: MovieInfo? = null
-            tried += "title"
-            info = runCatching { movieInfoRepo.lookup(title, useImdb = useImdb) }
-                .onFailure { Log.w(TAG, "guide lookup(title) failed", it) }.getOrNull()
-            if (info == null) {
-                // Retry with release-group / resolution tags stripped, e.g. "Movie (1985) [1080p]".
-                val clean = cleanGuideTitle(title)
-                if (clean.isNotBlank() && clean != title) {
-                    tried += "clean"
-                    info = runCatching { movieInfoRepo.lookup(clean, useImdb = useImdb) }
-                        .onFailure { Log.w(TAG, "guide lookup(clean) failed", it) }.getOrNull()
-                }
-            }
-            if (info == null && program.mediaType.lowercase() == "yt" && program.mediaId.isNotBlank()) {
-                // YouTube items (trailers, bumpers) aren't in movie databases; ask YouTube instead.
-                tried += "yt"
-                info = runCatching { movieInfoRepo.lookupYouTube(extractYouTubeId(program.mediaId)) }
-                    .onFailure { Log.w(TAG, "guide lookupYouTube failed", it) }.getOrNull()
-            }
-            guideInfoCache[title] = info
-            _guideMovieInfo.value = info
-        }
-    }
-
     fun guideSelect(row: Int = _guideRow.value, col: Int = _guideCol.value) {
         val ch = guideChannels.value.getOrNull(row) ?: return
         _guideRow.value = row
@@ -1013,3 +966,5 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
 }
 
 private const val EXIT_WINDOW_MS = 2500L
+private const val METADATA_REFRESH_MS = 20 * 60 * 1000L
+private const val MIN_METADATA_SECONDS = 300.0
