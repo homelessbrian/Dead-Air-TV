@@ -1,0 +1,67 @@
+name: Clean up stray files
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Only list what would be deleted (no changes)"
+        type: boolean
+        default: true
+
+permissions:
+  contents: write
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Find and remove strays
+        env:
+          DRY_RUN: ${{ inputs.dry_run }}
+        run: |
+          set -e
+          # Everything the project actually needs at the repo root.
+          KEEP=".github android .gitignore LICENSE NOTICE.md README.md version.json"
+
+          DELETE=()
+
+          # 1. Anything at the root that isn't on the keep list
+          for entry in $(ls -A); do
+            case " $KEEP " in
+              *" $entry "*) ;;                 # keep
+              .git) ;;                         # never touch
+              *) DELETE+=("$entry") ;;
+            esac
+          done
+
+          # 2. Build output or caches that should never be committed
+          for stray in android/build android/app/build android/.gradle android/.idea android/local.properties; do
+            [ -e "$stray" ] && DELETE+=("$stray")
+          done
+
+          # 3. Zips, OS junk, and the one-time unpack workflow
+          while IFS= read -r f; do DELETE+=("$f"); done < <(find . -path ./.git -prune -o \( -name '*.zip' -o -name '.DS_Store' -o -name 'Thumbs.db' \) -print)
+          [ -f .github/workflows/unpack.yml ] && DELETE+=(".github/workflows/unpack.yml")
+
+          if [ ${#DELETE[@]} -eq 0 ]; then
+            echo "Nothing to clean up."
+            exit 0
+          fi
+
+          echo "Will delete:"
+          printf '  %s\n' "${DELETE[@]}"
+
+          if [ "$DRY_RUN" = "true" ]; then
+            echo "Dry run — no changes made. Re-run with dry_run unchecked to delete."
+            exit 0
+          fi
+
+          git rm -r -q --cached "${DELETE[@]}" 2>/dev/null || true
+          rm -rf "${DELETE[@]}"
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git add -A
+          git commit -m "Clean up stray files" || { echo "Nothing to commit."; exit 0; }
+          git push
