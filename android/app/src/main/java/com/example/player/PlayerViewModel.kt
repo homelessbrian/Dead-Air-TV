@@ -88,9 +88,6 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     private val _guideMovieInfo = MutableStateFlow<MovieInfo?>(null)
     val guideMovieInfo: StateFlow<MovieInfo?> = _guideMovieInfo.asStateFlow()
     private var guideInfoJob: Job? = null
-    /** Diagnostics for the guide's detail strip: what the last lookup tried and found. */
-    private val _guideLookupState = MutableStateFlow("")
-    val guideLookupState: StateFlow<String> = _guideLookupState.asStateFlow()
     private val guideInfoCache = mutableMapOf<String, MovieInfo?>()
     val dataScraper = DataScraper(viewModelScope)
     private val movieInfoRepo = MovieInfoRepository()
@@ -672,12 +669,10 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         val title = program.title
         if (guideInfoCache.containsKey(title)) {
             _guideMovieInfo.value = guideInfoCache[title]
-            _guideLookupState.value = if (guideInfoCache[title] == null) "lookup: no match (cached)" else ""
             return
         }
         _guideMovieInfo.value = null
-        if (!settings.value.movieInfoEnabled) { _guideLookupState.value = "lookup: movie info disabled in settings"; return }
-        _guideLookupState.value = "lookup: searching…"
+        if (!settings.value.movieInfoEnabled) return
         guideInfoJob = viewModelScope.launch {
             delay(350L) // debounce while the user is still moving
             val useImdb = settings.value.imdbEnabled
@@ -703,7 +698,6 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
             }
             guideInfoCache[title] = info
             _guideMovieInfo.value = info
-            _guideLookupState.value = if (info == null) "lookup: no match (${tried.joinToString(", ")})" else ""
         }
     }
 
