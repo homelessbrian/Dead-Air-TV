@@ -187,4 +187,12 @@
     <string name="settings_clock_12h">12 Stunden (9:30 PM) in Sendeplan und Info</string>
     <string name="settings_clock_24h">24 Stunden (21:30) in Sendeplan und Info</string>
     <string name="nav_channel">Kanal</string>
+    <string name="nav_guide">TV-Programm</string>
+    <string name="guide_title">TV-PROGRAMM</string>
+    <string name="guide_watching">LÄUFT</string>
+    <string name="guide_hint_active">OK: schließen</string>
+    <string name="guide_hint_switch">OK: zu %1$s wechseln</string>
+    <string name="guide_footer_hint">▲▼ Kanal · ◄► Sendung · OK wechseln · ZURÜCK schließen</string>
+    <string name="guide_no_schedule">Nichts geplant</string>
+    <string name="guide_loading">Verbinde…</string>
 </resources>

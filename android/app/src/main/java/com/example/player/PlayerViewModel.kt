@@ -11,6 +11,8 @@ import com.example.data.model.ChannelUser
 import com.example.data.model.ChatLayout
 import com.example.data.model.ChatMessage
 import com.example.data.model.KnownChannels
+import com.example.data.guide.GuideChannel
+import com.example.data.guide.GuideRepository
 import com.example.data.model.LoginState
 import com.example.data.model.ConnectionStatus
 import com.example.data.model.MediaItem
@@ -34,6 +36,10 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
@@ -53,6 +59,15 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     )
 
     private val socketClient = CyTubeSocketClient(viewModelScope)
+    private val guideRepo = GuideRepository(viewModelScope)
+
+    // ---------------- TV Guide ----------------
+    private val _isGuideOpen = MutableStateFlow(false)
+    val isGuideOpen: StateFlow<Boolean> = _isGuideOpen.asStateFlow()
+    private val _guideRow = MutableStateFlow(0)
+    val guideRow: StateFlow<Int> = _guideRow.asStateFlow()
+    private val _guideCol = MutableStateFlow(0)
+    val guideCol: StateFlow<Int> = _guideCol.asStateFlow()
     val dataScraper = DataScraper(viewModelScope)
     private val movieInfoRepo = MovieInfoRepository()
 
@@ -77,6 +92,28 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     val loginState: StateFlow<LoginState> = socketClient.loginState
     val queueScheduleItems: StateFlow<List<QueueScheduleItem>> = dataScraper.queueScheduleItems
     val mediaSyncEvent: SharedFlow<MediaSyncUpdate> = socketClient.mediaSyncEvent
+
+    /** One row per known channel; the active one is fed by the player socket, the rest by scouts. */
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val guideChannels: StateFlow<List<GuideChannel>> = settings
+        .map { it.roomName }
+        .distinctUntilChanged()
+        .flatMapLatest { active ->
+            val rowFlows = KnownChannels.map { ch ->
+                val client = if (ch.room == active) socketClient else guideRepo.scout(ch.room)
+                combine(client.nowPlaying, client.playlist, client.connectionStatus) { np, pl, st ->
+                    GuideChannel(
+                        room = ch.room,
+                        label = ch.label,
+                        isActive = ch.room == active,
+                        status = st,
+                        programs = GuideRepository.buildPrograms(np, pl, System.currentTimeMillis())
+                    )
+                }
+            }
+            combine(rowFlows) { it.toList() }
+        }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
     val metadataOverlayState: StateFlow<MetadataOverlayState> = combine(
         socketClient.nowPlaying,
@@ -180,6 +217,10 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     private var remoteHintsDismissJob: Job? = null
 
     init {
+        // Keep guide scouts in step with whichever room is being watched.
+        viewModelScope.launch {
+            settings.map { it.roomName }.distinctUntilChanged().collect { guideRepo.setActiveRoom(it) }
+        }
         connectSocket()
 
         if (settings.value.customStreamUrl.isNotBlank()) {
@@ -541,6 +582,39 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
+    fun openGuide() {
+        closeNavRail()
+        hideMetadataOverlay()
+        hideUpNext()
+        hideTrivia()
+        val rows = guideChannels.value
+        _guideRow.value = rows.indexOfFirst { it.isActive }.coerceAtLeast(0)
+        _guideCol.value = 0
+        _isGuideOpen.value = true
+    }
+
+    fun closeGuide() {
+        _isGuideOpen.value = false
+    }
+
+    fun guideMove(dRow: Int, dCol: Int) {
+        val rows = guideChannels.value
+        if (rows.isEmpty()) return
+        val row = (_guideRow.value + dRow).coerceIn(0, rows.size - 1)
+        val programs = rows[row].programs
+        val col = if (programs.isEmpty()) 0 else (_guideCol.value + dCol).coerceIn(0, programs.size - 1)
+        _guideRow.value = row
+        _guideCol.value = col
+    }
+
+    fun guideSelect(row: Int = _guideRow.value, col: Int = _guideCol.value) {
+        val ch = guideChannels.value.getOrNull(row) ?: return
+        _guideRow.value = row
+        _guideCol.value = col
+        closeGuide()
+        if (!ch.isActive) switchRoom(ch.room)
+    }
+
     fun openNavRail() {
         hideMetadataOverlay()
         hideUpNext()
@@ -576,6 +650,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
             NavItem.SCHEDULE -> showUpNext()
             NavItem.DETAILS -> if (!_isTriviaVisible.value) toggleTrivia()
             NavItem.CHAT -> toggleChat()
+            NavItem.GUIDE -> openGuide()
             NavItem.CHANNEL -> {
                 switchToNextRoom()
                 // keep the menu open so the new channel name is visible
@@ -616,6 +691,10 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
             }
             _isUserListVisible.value -> {
                 hideUserList()
+                true
+            }
+            _isGuideOpen.value -> {
+                closeGuide()
                 true
             }
             _isNavRailOpen.value -> {
@@ -715,6 +794,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     override fun onCleared() {
+        guideRepo.shutdown()
         super.onCleared()
         socketClient.disconnect()
         dataScraper.stopScraping()

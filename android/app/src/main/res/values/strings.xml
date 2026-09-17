@@ -186,4 +186,12 @@
     <string name="settings_clock_12h">12-hour (9:30 PM) in Up Next and Info</string>
     <string name="settings_clock_24h">24-hour (21:30) in Up Next and Info</string>
     <string name="nav_channel">Channel</string>
+    <string name="nav_guide">TV Guide</string>
+    <string name="guide_title">TV GUIDE</string>
+    <string name="guide_watching">WATCHING</string>
+    <string name="guide_hint_active">OK: close</string>
+    <string name="guide_hint_switch">OK: switch to %1$s</string>
+    <string name="guide_footer_hint">▲▼ channel · ◄► programme · OK switch · BACK close</string>
+    <string name="guide_no_schedule">Nothing queued</string>
+    <string name="guide_loading">Connecting…</string>
 </resources>

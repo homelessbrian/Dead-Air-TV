@@ -77,6 +77,7 @@ import com.example.ui.components.VortexBackground
 import com.example.ui.metadata.MetadataOverlay
 import com.example.ui.metadata.TriviaOverlay
 import com.example.ui.nav.NavRail
+import com.example.ui.guide.GuideOverlay
 import com.example.ui.queue.UpNextOverlay
 import com.example.ui.settings.SettingsOverlay
 import com.example.ui.theme.AccentIceBlue
@@ -114,6 +115,10 @@ fun GrindhouseMainScreen(
     val isSettingsOpen by viewModel.isSettingsOpen.collectAsStateWithLifecycle()
     val isNavRailOpen by viewModel.isNavRailOpen.collectAsStateWithLifecycle()
     val navRailIndex by viewModel.navRailIndex.collectAsStateWithLifecycle()
+    val isGuideOpen by viewModel.isGuideOpen.collectAsStateWithLifecycle()
+    val guideRow by viewModel.guideRow.collectAsStateWithLifecycle()
+    val guideCol by viewModel.guideCol.collectAsStateWithLifecycle()
+    val guideChannels by viewModel.guideChannels.collectAsStateWithLifecycle()
     val settingsPage by viewModel.settingsPage.collectAsStateWithLifecycle()
     val movieInfo by viewModel.movieInfo.collectAsStateWithLifecycle()
     val isTriviaVisible by viewModel.isTriviaVisible.collectAsStateWithLifecycle()
@@ -584,6 +589,18 @@ fun GrindhouseMainScreen(
                     movieInfo = movieInfo,
                     onDismiss = { viewModel.hideTrivia() },
                     isTv = isTv,
+                    modifier = Modifier.fillMaxSize()
+                )
+
+                // 7b2. TV guide (all channels)
+                GuideOverlay(
+                    isVisible = isGuideOpen,
+                    channels = guideChannels,
+                    focusRow = guideRow,
+                    focusCol = guideCol,
+                    use24HourClock = settings.use24HourClock,
+                    isTv = isTv,
+                    onProgramClick = { r, c -> viewModel.guideSelect(r, c) },
                     modifier = Modifier.fillMaxSize()
                 )
 

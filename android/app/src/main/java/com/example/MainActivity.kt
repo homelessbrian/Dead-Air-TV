@@ -129,6 +129,19 @@ class MainActivity : ComponentActivity() {
                 }
             }
 
+            // TV guide open: it owns the D-pad until closed.
+            if (viewModel.isGuideOpen.value && !isMenuOrDialogOpen) {
+                when (event.keyCode) {
+                    KeyEvent.KEYCODE_DPAD_UP -> viewModel.guideMove(-1, 0)
+                    KeyEvent.KEYCODE_DPAD_DOWN -> viewModel.guideMove(1, 0)
+                    KeyEvent.KEYCODE_DPAD_LEFT -> viewModel.guideMove(0, -1)
+                    KeyEvent.KEYCODE_DPAD_RIGHT -> viewModel.guideMove(0, 1)
+                    KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER -> viewModel.guideSelect()
+                    KeyEvent.KEYCODE_BACK, KeyEvent.KEYCODE_MENU, KeyEvent.KEYCODE_SETTINGS -> viewModel.closeGuide()
+                }
+                return true
+            }
+
             // Left navigation rail open: it owns the D-pad until closed.
             if (viewModel.isNavRailOpen.value && !isMenuOrDialogOpen) {
                 when (event.keyCode) {
