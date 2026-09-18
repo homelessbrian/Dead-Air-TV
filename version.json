@@ -1,11 +1,11 @@
 {
-  "version": "1.2.1",
-  "versionCode": 10201,
+  "version": "1.2.2",
+  "versionCode": 10202,
   "apk": "dead-air-full.apk",
   "lightApk": "dead-air-light.apk",
-  "url": "https://github.com/homelessbrian/Dead-Air-TV/releases/download/v1.2.1/dead-air-full.apk",
-  "lightUrl": "https://github.com/homelessbrian/Dead-Air-TV/releases/download/v1.2.1/dead-air-light.apk",
-  "notes": "Dead Air v1.2.1 — see https://github.com/homelessbrian/Dead-Air-TV/releases/tag/v1.2.1",
+  "url": "https://github.com/homelessbrian/Dead-Air-TV/releases/download/v1.2.2/dead-air-full.apk",
+  "lightUrl": "https://github.com/homelessbrian/Dead-Air-TV/releases/download/v1.2.2/dead-air-light.apk",
+  "notes": "Dead Air v1.2.2 — see https://github.com/homelessbrian/Dead-Air-TV/releases/tag/v1.2.2",
   "minAndroid": 7,
   "publishedAt": "2026-09-18"
 }
