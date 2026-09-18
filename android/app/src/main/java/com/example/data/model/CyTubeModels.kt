@@ -14,7 +14,8 @@ data class ChannelOption(val room: String, val label: String)
 
 val KnownChannels = listOf(
     ChannelOption("Channel-Z", "Channel-Z"),
-    ChannelOption("420Grindhouse", "420 Grindhouse")
+    ChannelOption("420Grindhouse", "420 Grindhouse"),
+    ChannelOption("spookyvision", "SpookyVision")
 )
 
 data class QueueScheduleItem(

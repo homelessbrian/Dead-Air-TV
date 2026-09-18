@@ -137,9 +137,13 @@ fun GrindhouseMainScreen(
     val showExitDialog by viewModel.showExitDialog.collectAsStateWithLifecycle()
     val mediaSyncUpdate by viewModel.mediaSyncEvent.collectAsStateWithLifecycle(initialValue = null)
 
-    // Handle system back gestures and back button on Android phones smoothly
-    BackHandler(enabled = true) {
-        viewModel.handleBackPress()
+    // Handle system back gestures and the back button on phones. On TV the Activity's
+    // dispatchKeyEvent owns BACK (menu -> exit hint -> exit); double-handling it here
+    // would run the sequence twice per press, so this is phone-only.
+    BackHandler(enabled = !isTv) {
+        if (!viewModel.handleBackPress()) {
+            if (viewModel.backPressedOnIdleScreen()) (context as? android.app.Activity)?.finish()
+        }
     }
 
     var showSplashScreen by remember { mutableStateOf(false) } // splash disabled
