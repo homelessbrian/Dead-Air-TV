@@ -148,8 +148,15 @@ class MainActivity : ComponentActivity() {
                     KeyEvent.KEYCODE_DPAD_UP -> { viewModel.navRailMove(-1); return true }
                     KeyEvent.KEYCODE_DPAD_DOWN -> { viewModel.navRailMove(1); return true }
                     KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER -> { viewModel.navRailSelect(); return true }
-                    KeyEvent.KEYCODE_DPAD_RIGHT, KeyEvent.KEYCODE_DPAD_LEFT, KeyEvent.KEYCODE_BACK -> {
+                    KeyEvent.KEYCODE_DPAD_RIGHT, KeyEvent.KEYCODE_DPAD_LEFT -> {
                         viewModel.closeNavRail(); return true
+                    }
+                    KeyEvent.KEYCODE_BACK -> {
+                        // BACK on the open menu: close it and start the exit-hint step so a
+                        // further BACK exits (menu -> "press back again" -> exit).
+                        viewModel.closeNavRail()
+                        if (viewModel.backPressedOnIdleScreen()) finish()
+                        return true
                     }
                     KeyEvent.KEYCODE_MENU, KeyEvent.KEYCODE_SETTINGS -> {
                         viewModel.closeNavRail(); viewModel.openSettings(); return true

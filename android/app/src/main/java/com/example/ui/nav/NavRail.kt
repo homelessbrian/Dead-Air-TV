@@ -25,7 +25,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Chat
-import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.PlayCircle
 import androidx.compose.material.icons.filled.Settings
@@ -57,7 +56,6 @@ import com.example.ui.theme.TextMuted
  */
 enum class NavItem(val icon: ImageVector, val labelRes: Int) {
     NOW_PLAYING(Icons.Default.PlayCircle, R.string.nav_now_playing),
-    SCHEDULE(Icons.Default.CalendarMonth, R.string.nav_schedule),
     GUIDE(Icons.Default.GridView, R.string.nav_guide),
     CHAT(Icons.AutoMirrored.Filled.Chat, R.string.nav_chat),
     SETTINGS(Icons.Default.Settings, R.string.nav_settings);

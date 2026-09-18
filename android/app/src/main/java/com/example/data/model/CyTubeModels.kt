@@ -53,9 +53,17 @@ data class MediaItem(
             val t = type.lowercase()
             val i = id.lowercase()
             val u = (url ?: directUrl).lowercase()
-            return t == "yt" || t == "tw" || t == "vi" ||
-                    (t !in listOf("cm", "fi", "hl", "gd", "raw", "direct", "stream", "mp4", "m3u8") &&
-                            (i.contains("youtube.com") || i.contains("youtu.be") || u.contains("youtube.com") || u.contains("youtu.be")))
+            // Embedded players that must run in a WebView.
+            if (t == "yt" || t == "tw" || t == "vi") return true
+            // A direct video/stream file always plays in the native player, whatever the
+            // CyTube type code is — this keeps aspect ratio correct (RESIZE_MODE_FIT) and
+            // avoids the WebView's browser-default letterboxing.
+            val looksDirect = Regex("""\.(mp4|m3u8|mkv|webm|mov|ts|m4v|mpd)(\?|${'$'})""")
+                .containsMatchIn(i) || Regex("""\.(mp4|m3u8|mkv|webm|mov|ts|m4v|mpd)(\?|${'$'})""").containsMatchIn(u)
+            if (looksDirect) return false
+            // Otherwise only fall back to a WebView for a recognised embed host.
+            return t !in listOf("cm", "fi", "hl", "gd", "raw", "direct", "stream", "mp4", "m3u8") &&
+                    (i.contains("youtube.com") || i.contains("youtu.be") || u.contains("youtube.com") || u.contains("youtu.be"))
         }
 }
 

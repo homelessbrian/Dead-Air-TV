@@ -189,6 +189,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         val isReddit = args[7] as? Boolean ?: false
         val users = args[8] as? Int ?: 0
         val cfg = args[9] as? AppSettings ?: AppSettings()
+        val isGrindhouse = cfg.roomName == "420Grindhouse"
         @Suppress("UNCHECKED_CAST")
         val webQueue = if (cfg.roomName == "Channel-Z") (args[10] as? List<WebQueueItem> ?: emptyList()) else emptyList()
 
@@ -207,17 +208,22 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
 
         val finalNext = when {
             socketNext.isNotEmpty() -> socketNext
-            scheduleNext.isNotEmpty() -> scheduleNext
-            else -> scrapedQueueItems.map { q ->
+            isGrindhouse && scheduleNext.isNotEmpty() -> scheduleNext
+            isGrindhouse -> scrapedQueueItems.map { q ->
                 MediaItem(
                     id = q.mediaId,
                     title = q.title,
                     durationSeconds = q.durationSeconds.toDouble()
                 )
             }
+            else -> emptyList()
         }
 
-        val finalQueueItems = if (socketQueue.isNotEmpty()) socketQueue else scrapedQueueItems
+        val finalQueueItems = when {
+            socketQueue.isNotEmpty() -> socketQueue
+            isGrindhouse -> scrapedQueueItems
+            else -> emptyList()
+        }
 
         MetadataOverlayState(
             nowPlaying = now,
@@ -226,9 +232,9 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
             channelName = cfg.roomName,
             userCount = users,
             isLoading = now == null,
-            redditScheduleTitle = redditTitle,
-            redditScheduleText = redditText,
-            isRedditFallback = isReddit && socketQueue.isEmpty()
+            redditScheduleTitle = if (isGrindhouse) redditTitle else null,
+            redditScheduleText = if (isGrindhouse) redditText else null,
+            isRedditFallback = isGrindhouse && isReddit && socketQueue.isEmpty()
         )
     }.stateIn(
         scope = viewModelScope,
@@ -787,7 +793,6 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         closeNavRail()
         when (item) {
             NavItem.NOW_PLAYING -> showMetadataOverlay()
-            NavItem.SCHEDULE -> showUpNext()
             NavItem.CHAT -> toggleChat()
             NavItem.GUIDE -> openGuide()
             NavItem.SETTINGS -> openSettings()
