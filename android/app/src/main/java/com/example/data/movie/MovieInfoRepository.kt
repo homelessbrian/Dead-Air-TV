@@ -82,7 +82,9 @@ class MovieInfoRepository(
         val parsed = parseTitle(rawTitle)
         if (parsed.title.length < 2) return@withContext null
 
-        val key = "${parsed.title}|${parsed.year}|$useImdb"
+        // Episodes of the same series share title+year, so the key must include S/E — otherwise
+        // the first episode's metadata (with its own S02E06) would be served for every episode.
+        val key = "${parsed.title}|${parsed.year}|${parsed.season}|${parsed.episode}|$useImdb"
         cache[key]?.let { return@withContext it }
 
         val fromWikidata = try {
@@ -125,8 +127,13 @@ class MovieInfoRepository(
             base
         }
 
-        cache[key] = enriched
-        enriched
+        val stamped = enriched.copy(
+            season = parsed.season ?: enriched.season,
+            episode = parsed.episode ?: enriched.episode,
+            episodeTitle = parsed.episodeName ?: enriched.episodeTitle
+        )
+        cache[key] = stamped
+        stamped
     }
 
     /** Trivia wird erst geholt, wenn jemand sie sehen will — die Listen sind lang. */

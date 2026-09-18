@@ -117,7 +117,7 @@ fun GuideOverlay(
 
         val pad = if (isTv) 48.dp else 16.dp
         val channelColWidth = if (isTv) 200.dp else 130.dp
-        val rowHeight = if (isTv) 64.dp else 52.dp
+        val rowHeight = if (isTv) 46.dp else 40.dp
 
         Box(
             modifier = Modifier
@@ -251,9 +251,7 @@ fun GuideOverlay(
                                     fontSize = if (isTv) 18.sp else 15.sp,
                                     fontWeight = FontWeight.Bold,
                                     maxLines = 1,
-                                    softWrap = false,
-                                    overflow = TextOverflow.Clip,
-                                    modifier = Modifier.fillMaxWidth().basicMarquee()
+                                    overflow = TextOverflow.Ellipsis
                                 )
                                 Spacer(Modifier.height(3.dp))
                                 val range = formatClock(focusedProgram.startMs, use24HourClock) + " – " +
@@ -278,10 +276,8 @@ fun GuideOverlay(
                                         text = plot,
                                         color = TextMuted,
                                         fontSize = 12.sp,
-                                        maxLines = 1,
-                                        softWrap = false,
-                                        overflow = TextOverflow.Clip,
-                                        modifier = Modifier.fillMaxWidth().basicMarquee()
+                                        maxLines = 2,
+                                        overflow = TextOverflow.Ellipsis
                                     )
                                 }
                             }
@@ -352,6 +348,7 @@ private fun ChannelCell(ch: GuideChannel, focused: Boolean, modifier: Modifier) 
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun ProgramCell(
     program: GuideProgram,
@@ -381,8 +378,11 @@ private fun ProgramCell(
             color = if (focused || program.isCurrent) PureWhite else PureWhite.copy(alpha = 0.8f),
             fontSize = 13.sp,
             fontWeight = if (focused || program.isCurrent) FontWeight.SemiBold else FontWeight.Normal,
-            maxLines = 2,
-            overflow = TextOverflow.Ellipsis
+            maxLines = 1,
+            softWrap = false,
+            overflow = TextOverflow.Clip,
+            modifier = Modifier.fillMaxWidth()
+                .then(if (focused) Modifier.basicMarquee() else Modifier)
         )
     }
 }
